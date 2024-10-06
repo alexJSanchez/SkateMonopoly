@@ -54,7 +54,11 @@ export default function Board() {
                 <div class="space property"><div className='property-name'><p>x-Games</p><p>Price $400</p></div></div>
             </div>
 
+            {/* <!-- Game Piece --> */}
+            <div class="game-piece" id="game-piece">🏃‍♂️</div>
 
+            {/* <!-- Button to Move --> */}
+            <button id="moveBtn">Move</button>
         </div>
     )
 }

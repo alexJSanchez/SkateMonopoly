@@ -11,20 +11,26 @@ export default function Board() {
 
     // Function to move the piece when the button is clicked
     const movePiece = () => {
+        // Generate a random number between 1 and 6
+        const diceRoll = Math.floor(Math.random() * 6) + 1;
+
         if (currentPlayer === 1) {
             setPlayerOneCurrentPosition((prevPosition) => {
-                const newPosition = (prevPosition + 1) % totalSpaces;
-                return newPosition === 40 ? 0 : newPosition; // Reset to 0 if it reaches 39
+                const newPosition = (prevPosition + diceRoll) % totalSpaces;
+                return newPosition >= 40 ? 0 : newPosition; // Reset to 0 if it reaches 39
             });
             setCurrentPlayer(2); // Switch to player two
         } else {
             setPlayerTwoCurrentPosition((prevPosition) => {
-                const newPosition = (prevPosition + 1) % totalSpaces;
-                return newPosition === 40 ? 0 : newPosition; // Reset to 0 if it reaches 39
+                const newPosition = (prevPosition + diceRoll) % totalSpaces;
+                return newPosition >= 40 ? 0 : newPosition; // Reset to 0 if it reaches 39
             });
             setCurrentPlayer(1); // Switch to player one
         }
+
+        console.log(`Player ${currentPlayer} rolled a ${diceRoll}`); // Optional: Log the dice roll
     };
+
 
     return (
         <div>

@@ -7,23 +7,24 @@ export default function Board() {
     const [playerTwoCurrentPosition, setPlayerTwoCurrentPosition] = useState(0);
     const [currentPlayer, setCurrentPlayer] = useState(1); // 1 for player one, 2 for player two
 
-    const totalSpaces = 44; // Total spaces on the board
+    const totalSpaces = 40; // Total spaces on the board
 
     // Function to move the piece when the button is clicked
     const movePiece = () => {
         // Generate a random number between 1 and 6
         const diceRoll = Math.floor(Math.random() * 6) + 1;
+        console.log(diceRoll)
 
         if (currentPlayer === 1) {
             setPlayerOneCurrentPosition((prevPosition) => {
                 const newPosition = (prevPosition + diceRoll) % totalSpaces;
-                return newPosition >= 40 ? 0 : newPosition; // Reset to 0 if it reaches 39
+                return newPosition >= 40 ? newPosition - 40 : newPosition; // Reset to 0 if it reaches 39
             });
             setCurrentPlayer(2); // Switch to player two
         } else {
             setPlayerTwoCurrentPosition((prevPosition) => {
                 const newPosition = (prevPosition + diceRoll) % totalSpaces;
-                return newPosition >= 40 ? 0 : newPosition; // Reset to 0 if it reaches 39
+                return newPosition >= 40 ? newPosition - 40 : newPosition; // Reset to 0 if it reaches 39
             });
             setCurrentPlayer(1); // Switch to player one
         }

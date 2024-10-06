@@ -9,6 +9,9 @@ export default function Board() {
     // Function to move the piece when the button is clicked
     const movePiece = () => {
         setCurrentPosition((prevPosition) => (prevPosition + 1) % totalSpaces); // Update the position and wrap around the board
+        if (currentPosition === 39) {
+            setCurrentPosition(0)
+        }
         console.log(currentPosition)
     };
     return (

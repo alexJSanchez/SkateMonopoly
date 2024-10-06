@@ -2,18 +2,30 @@ import React, { useState } from 'react'
 
 
 export default function Board() {
-    // Set the current position in state
-    const [currentPosition, setCurrentPosition] = useState("0");
+    // Set the current positions for both players
+    const [playerOneCurrentPosition, setPlayerOneCurrentPosition] = useState(0);
+    const [playerTwoCurrentPosition, setPlayerTwoCurrentPosition] = useState(0);
+    const [currentPlayer, setCurrentPlayer] = useState(1); // 1 for player one, 2 for player two
+
     const totalSpaces = 44; // Total spaces on the board
 
     // Function to move the piece when the button is clicked
     const movePiece = () => {
-        setCurrentPosition((prevPosition) => (prevPosition + 1) % totalSpaces); // Update the position and wrap around the board
-        if (currentPosition === 39) {
-            setCurrentPosition(0)
+        if (currentPlayer === 1) {
+            setPlayerOneCurrentPosition((prevPosition) => {
+                const newPosition = (prevPosition + 1) % totalSpaces;
+                return newPosition === 40 ? 0 : newPosition; // Reset to 0 if it reaches 39
+            });
+            setCurrentPlayer(2); // Switch to player two
+        } else {
+            setPlayerTwoCurrentPosition((prevPosition) => {
+                const newPosition = (prevPosition + 1) % totalSpaces;
+                return newPosition === 40 ? 0 : newPosition; // Reset to 0 if it reaches 39
+            });
+            setCurrentPlayer(1); // Switch to player one
         }
-        console.log(currentPosition)
     };
+
     return (
         <div>
 
@@ -66,7 +78,11 @@ export default function Board() {
                 <div class="space property"><div className='property-name'><p>Skate Shoes</p><p>Price $75</p></div></div>
                 <div class="space property"><div className='property-name'><p>x-Games</p><p>Price $400</p></div></div>
                 {/* Game Piece */}
-                <div className={`game-piece position-${currentPosition}`}>🏃‍♂️</div>
+
+
+                {/* Game Pieces */}
+                <div id='playerOne' className={`game-piece position-${playerOneCurrentPosition}`}>🏃‍♂️</div>
+                <div id='playerTwo' className={`game-piece-2 position-${playerTwoCurrentPosition}`}>🏃‍♂️</div>
             </div>
 
 

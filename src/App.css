@@ -80,7 +80,7 @@ body {
 
 /* Positioning the game piece using grid properties */
 .game-piece {
-  position: absolute; /* Change this to absolute to place it correctly */
+   /* Change this to absolute to place it correctly */
   width: 30px;
   height: 30px;
   transition: all 0.5s ease; /* Smooth transition */

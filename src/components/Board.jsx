@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 
 export default function Board() {
     // Set the current position in state
-    const [currentPosition, setCurrentPosition] = useState(0);
+    const [currentPosition, setCurrentPosition] = useState("0");
     const totalSpaces = 44; // Total spaces on the board
 
     // Function to move the piece when the button is clicked
@@ -62,10 +62,11 @@ export default function Board() {
                 <div class="space property"><div className='property-name'><p>Street Leauge</p><p>Price $350</p></div></div>
                 <div class="space property"><div className='property-name'><p>Skate Shoes</p><p>Price $75</p></div></div>
                 <div class="space property"><div className='property-name'><p>x-Games</p><p>Price $400</p></div></div>
+                {/* Game Piece */}
+                <div className={`game-piece position-${currentPosition}`}>🏃‍♂️</div>
             </div>
 
-            {/* Game Piece */}
-            <div className={`game-piece position-${currentPosition}`}>🏃‍♂️</div>
+
 
 
             {/* Button to Move */}

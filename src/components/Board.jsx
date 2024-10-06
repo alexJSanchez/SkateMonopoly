@@ -43,15 +43,15 @@ export default function Board() {
                 <div class="space corner go-to-jail">Go to Jail</div>
 
                 {/* <!-- Left Column (reversed) --> */}
-                <div class="space property">Space 28</div>
-                <div class="space property">Space 29</div>
-                <div class="space property">Space 30</div>
-                <div class="space property">Space 31</div>
-                <div class="space property">Space 32</div>
-                <div class="space property">Space 33</div>
-                <div class="space property">Space 34</div>
-                <div class="space property">Space 35</div>
-                <div class="space property start">Space 36</div>
+                <div class="space property"><div className='property-name'><p>USU Skatepark Africa</p><p>Price $300</p></div></div>
+                <div class="space property"><div className='property-name'><p>Shangalla Skatepark Africa</p><p>Price $300</p></div></div>
+                <div class="space property"><div className='property-name'><p>Skatepark Trivia</p></div></div>
+                <div class="space property"><div className='property-name'><p>Kgali Skatepark Africa</p><p>Price $320</p></div></div>
+                <div class="space property"><div className='property-name'><p>Zero Skateboards</p><p>Price $200</p></div></div>
+                <div class="space property"><div className='property-name'><p>Chance</p></div></div>
+                <div class="space property"><div className='property-name'><p>Street Leauge</p><p>Price $350</p></div></div>
+                <div class="space property"><div className='property-name'><p>Skate Shoes</p><p>Price $75</p></div></div>
+                <div class="space property"><div className='property-name'><p>x-Games</p><p>Price $400</p></div></div>
             </div>
 
 

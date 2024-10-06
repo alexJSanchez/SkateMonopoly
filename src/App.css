@@ -1,6 +1,6 @@
 body {
   font-family: Arial, sans-serif;
-  background-color: gray;
+ 
 }
 
 .board {
@@ -8,7 +8,7 @@ body {
   grid-template-columns: repeat(11, 1fr);
   grid-template-rows: repeat(11, 1fr);
   width: auto;
-  height: 600px;
+  height: auto;
   margin: 50px auto;
   border: 2px solid black;
 }

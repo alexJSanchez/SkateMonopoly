@@ -10,36 +10,36 @@ export default function Board() {
                 <div class="space property"><div className='property-name'><p>Venice Beach USA</p><p>price $50</p></div></div>
                 <div class="space property"><div className='property-name'><p>Skate Trivia</p><p>Pick Up Card</p></div></div>
                 <div class="space property"><div className='property-name'><p>Burnside</p><p>Price $50</p></div></div>
-                <div class="space property">Space 4</div>
-                <div class="space property">Space 5</div>
-                <div class="space property">Space 6</div>
-                <div class="space property">Space 7</div>
-                <div class="space property">Space 8</div>
-                <div class="space property">Space 9</div>
+                <div class="space property"><div className='property-name'><p>New Setup</p><p>Pay 10% or $200</p></div></div>
+                <div class="space property"><div className='property-name'><p>Element Skateboards</p><p>Price $200</p></div></div>
+                <div class="space property"><div className='property-name'><p>Shaw Millenium Canada</p><p>Price $100</p></div></div>
+                <div class="space property"><div className='property-name'><p>Chance Card</p></div></div>
+                <div class="space property"><div className='property-name'><p>Big O Canada</p><p>Price $100</p></div></div>
+                <div class="space property"><div className='property-name'><p>Downtown Plaza Canada</p><p>Price $120</p></div></div>
                 <div class="space corner jail">Jail</div>
 
                 {/* <!-- Right Column --> */}
-                <div class="space property">Space 10</div>
-                <div class="space property">Space 11</div>
-                <div class="space property">Space 12</div>
-                <div class="space property">Space 13</div>
-                <div class="space property">Space 14</div>
-                <div class="space property">Space 15</div>
-                <div class="space property">Space 16</div>
-                <div class="space property">Space 17</div>
-                <div class="space property">Space 18</div>
+                <div class="space property"><div className='property-name'><p>Gulliver SkatePark Spain</p><p>Price $140</p></div></div>
+                <div class="space property"><div className='property-name'><p>Supreme</p><p>Price $150</p></div></div>
+                <div class="space property"><div className='property-name'><p>Macba Spain</p><p>Price $140</p></div></div>
+                <div class="space property"><div className='property-name'><p>Skatepark Church Spain</p><p>Price $160</p></div></div>
+                <div class="space property"><div className='property-name'><p>Plan B Skateboards</p><p>Price $200</p></div></div>
+                <div class="space property"><div className='property-name'><p>Guangzhou China</p><p>Price $180</p></div></div>
+                <div class="space property"><div className='property-name'><p>Skate Trivia</p><p>Pick Up Card</p></div></div>
+                <div class="space property"><div className='property-name'><p>Lai Chi China</p><p>Price $180</p></div></div>
+                <div class="space property"><div className='property-name'><p>Red Ribbon China</p><p>Price $200</p></div></div>
                 <div class="space corner free-parking">Free Parking</div>
 
                 {/* <!-- Bottom Row (reversed) --> */}
-                <div class="space property">Space 19</div>
-                <div class="space property">Space 20</div>
-                <div class="space property">Space 21</div>
-                <div class="space property">Space 22</div>
-                <div class="space property">Space 23</div>
-                <div class="space property">Space 24</div>
-                <div class="space property">Space 25</div>
-                <div class="space property">Space 26</div>
-                <div class="space property">Space 27</div>
+                <div class="space property"><div className='property-name'><p>North Brigade Germany</p><p>Price $220</p></div></div>
+                <div class="space property"><div className='property-name'><p>Chance</p></div></div>
+                <div class="space property"><div className='property-name'><p>Skatehalle Germany</p><p>Price $220</p></div></div>
+                <div class="space property"><div className='property-name'><p>Hirshgarten Skatepark Germany</p><p>Price $200</p></div></div>
+                <div class="space property"><div className='property-name'><p>Girl Skateboards</p><p>Price $200</p></div></div>
+                <div class="space property"><div className='property-name'><p>Nike Tempo Mexico</p><p>Price $250</p></div></div>
+                <div class="space property"><div className='property-name'><p>La Duna Mexico</p><p>Price $250</p></div></div>
+                <div class="space property"><div className='property-name'><p>Tampa Skateshop</p><p>Price $120</p></div></div>
+                <div class="space property"><div className='property-name'><p>La Mexicana Mexico</p><p>Price $280</p></div></div>
                 <div class="space corner go-to-jail">Go to Jail</div>
 
                 {/* <!-- Left Column (reversed) --> */}

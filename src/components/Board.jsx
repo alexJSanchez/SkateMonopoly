@@ -6,10 +6,10 @@ export default function Board() {
 
             <div class="board">
                 {/* <!-- Top Row --> */}
-                <div class="space corner go">Go</div>
-                <div class="space property">Space 1</div>
-                <div class="space property">Space 2</div>
-                <div class="space property">Space 3</div>
+                <div class="space corner go">SK8</div>
+                <div class="space property"><div className='property-name'><p>Venice Beach USA</p><p>price $50</p></div></div>
+                <div class="space property"><div className='property-name'><p>Skate Trivia</p><p>Pick Up Card</p></div></div>
+                <div class="space property"><div className='property-name'><p>Burnside</p><p>Price $50</p></div></div>
                 <div class="space property">Space 4</div>
                 <div class="space property">Space 5</div>
                 <div class="space property">Space 6</div>

@@ -74,3 +74,18 @@ body {
 .space:nth-child(38) { grid-column: 1; grid-row: 4; }
 .space:nth-child(39) { grid-column: 1; grid-row: 3; }
 .space:nth-child(40) { grid-column: 1; grid-row: 2; }
+
+/* Positioning the game piece dynamically based on the current position */
+/* Positioning the game piece dynamically based on the current position */
+
+/* Positioning the game piece using grid properties */
+.game-piece {
+  position: absolute; /* Change this to absolute to place it correctly */
+  width: 30px;
+  height: 30px;
+  transition: all 0.5s ease; /* Smooth transition */
+}
+
+.position-0 { grid-column: 1; grid-row: 1; }
+.position-1 { grid-column: 2; grid-row: 1; }
+/* Continue this pattern for each space on the board */

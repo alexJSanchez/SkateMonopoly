@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import BoardSpaces from "../game/BoardSpaces.jsx"
-import boardSpaces from '../game/BoardSpaces.jsx';
+
 
 
 export default function Board() {
@@ -11,7 +11,13 @@ export default function Board() {
         {
             space: playerOneCurrentPosition,
             money: 0,
-            properties: {}
+            properties: []
+        })
+    const [playerTwoHand, setPlayerTwoHand] = useState(
+        {
+            space: playerTwoCurrentPosition,
+            money: 0,
+            properties: []
         })
     const [currentPlayer, setCurrentPlayer] = useState(1); // 1 for player one, 2 for player two
 
@@ -106,7 +112,9 @@ export default function Board() {
                     <h2>
                         Player One Status
                     </h2>
-
+                    <p>{BoardSpaces[playerOneCurrentPosition].name}</p>
+                    <p>{playerOneHand.money}</p>
+                    <p> {playerOneHand.properties}</p>
                 </div>
 
                 {/*player two cards*/}
@@ -114,6 +122,9 @@ export default function Board() {
                     <h2>
                         Player Two Status
                     </h2>
+                    <p>{BoardSpaces[playerTwoCurrentPosition].name}</p>
+                    <p>{playerTwoHand.money}</p>
+                    <p> {playerTwoHand.properties}</p>
                 </div>
             </div>
 

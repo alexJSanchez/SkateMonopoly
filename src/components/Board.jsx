@@ -5,6 +5,7 @@ export default function Board() {
     // Set the current positions for both players
     const [playerOneCurrentPosition, setPlayerOneCurrentPosition] = useState(0);
     const [playerTwoCurrentPosition, setPlayerTwoCurrentPosition] = useState(0);
+    const [playerOneHand, setPlayerOneHand] = useState({ space: playerOneCurrentPosition })
     const [currentPlayer, setCurrentPlayer] = useState(1); // 1 for player one, 2 for player two
 
     const totalSpaces = 40; // Total spaces on the board
@@ -35,7 +36,6 @@ export default function Board() {
 
     return (
         <div>
-
             <div className="board">
                 {/* <!-- Top Row --> */}
                 <div className="space corner go">SK8</div>
@@ -91,7 +91,8 @@ export default function Board() {
                 <div id='playerOne' className={`game-piece position-${playerOneCurrentPosition}`}>🏃‍♂️</div>
                 <div id='playerTwo' className={`game-piece-2 position-${playerTwoCurrentPosition}`}>🏃‍♂️</div>
                 {/* Button to Move */}
-                <button className='player-action' onClick={movePiece}>Move</button>
+                <div className='player-action'><button onClick={movePiece}>Move</button></div>
+
             </div>
 
 

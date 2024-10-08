@@ -92,6 +92,7 @@ body {
 }
 
 .player-action{
+  text-align: center;
   grid-column: 6; grid-row: 6;
 }
 

@@ -1,12 +1,18 @@
 import React, { useState } from 'react'
 import BoardSpaces from "../game/BoardSpaces.jsx"
+import boardSpaces from '../game/BoardSpaces.jsx';
 
 
 export default function Board() {
     // Set the current positions for both players
     const [playerOneCurrentPosition, setPlayerOneCurrentPosition] = useState(0);
     const [playerTwoCurrentPosition, setPlayerTwoCurrentPosition] = useState(0);
-    const [playerOneHand, setPlayerOneHand] = useState({ space: playerOneCurrentPosition })
+    const [playerOneHand, setPlayerOneHand] = useState(
+        {
+            space: playerOneCurrentPosition,
+            money: 0,
+            properties: {}
+        })
     const [currentPlayer, setCurrentPlayer] = useState(1); // 1 for player one, 2 for player two
 
     const totalSpaces = 40; // Total spaces on the board
@@ -91,9 +97,24 @@ export default function Board() {
                 {/* Game Pieces */}
                 <div id='playerOne' className={`game-piece position-${playerOneCurrentPosition}`}>🏃‍♂️</div>
                 <div id='playerTwo' className={`game-piece-2 position-${playerTwoCurrentPosition}`}>🏃‍♂️</div>
+
                 {/* Button to Move */}
                 <div className='player-action'><button onClick={movePiece}>Move</button></div>
 
+                {/*player one cards*/}
+                <div className='playerOne-status'>
+                    <h2>
+                        Player One Status
+                    </h2>
+
+                </div>
+
+                {/*player two cards*/}
+                <div className='playerTwo-status'>
+                    <h2>
+                        Player Two Status
+                    </h2>
+                </div>
             </div>
 
 

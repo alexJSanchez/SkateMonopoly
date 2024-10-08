@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import BoardSpaces from "../game/BoardSpaces.jsx"
 
 
 export default function Board() {

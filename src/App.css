@@ -91,6 +91,10 @@ body {
   line-height: 60px; /* Centers the emoji vertically */
 }
 
+.player-action{
+  grid-column: 6; grid-row: 6;
+}
+
 /*position the game piece*/
 .position-0 { grid-column: 1; grid-row: 1; }
 .position-1 { grid-column: 2; grid-row: 1; }

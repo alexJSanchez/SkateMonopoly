@@ -90,13 +90,14 @@ export default function Board() {
                 {/* Game Pieces */}
                 <div id='playerOne' className={`game-piece position-${playerOneCurrentPosition}`}>🏃‍♂️</div>
                 <div id='playerTwo' className={`game-piece-2 position-${playerTwoCurrentPosition}`}>🏃‍♂️</div>
+                {/* Button to Move */}
+                <button className='player-action' onClick={movePiece}>Move</button>
             </div>
 
 
 
 
-            {/* Button to Move */}
-            <button onClick={movePiece}>Move</button>
+
         </div>
     )
 }

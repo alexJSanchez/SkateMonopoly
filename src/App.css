@@ -11,7 +11,11 @@ body {
   height: auto;
   margin: 50px auto;
   border: 2px solid black;
-  
+}
+.player-turn{
+  text-align: center;
+  grid-row: 2;
+  grid-column: 6;
 }
 
 .space {

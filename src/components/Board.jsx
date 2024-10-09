@@ -7,6 +7,7 @@ export default function Board() {
     // Set the current positions for both players
     const [playerOneCurrentPosition, setPlayerOneCurrentPosition] = useState(0);
     const [playerTwoCurrentPosition, setPlayerTwoCurrentPosition] = useState(0);
+    // Sets the each players hand
     const [playerOneHand, setPlayerOneHand] = useState(
         {
             space: playerOneCurrentPosition,
@@ -19,9 +20,11 @@ export default function Board() {
             money: 0,
             properties: []
         })
-    const [currentPlayer, setCurrentPlayer] = useState(1); // 1 for player one, 2 for player two
+    // 1 for player one, 2 for player two
+    const [currentPlayer, setCurrentPlayer] = useState(1);
 
-    const totalSpaces = 40; // Total spaces on the board
+    // Total spaces on the board
+    const totalSpaces = 40;
 
     // Function to move the piece when the button is clicked
     const movePiece = () => {
@@ -32,12 +35,15 @@ export default function Board() {
         if (currentPlayer === 1) {
             setPlayerOneCurrentPosition((prevPosition) => {
                 const newPosition = (prevPosition + diceRoll) % totalSpaces;
+                setPlayerOneHand({ ...playerOneHand, space: newPosition })
                 return newPosition >= 40 ? newPosition - 40 : newPosition; // Reset to 0 if it reaches 39
             });
             setCurrentPlayer(2); // Switch to player two
+
         } else {
             setPlayerTwoCurrentPosition((prevPosition) => {
                 const newPosition = (prevPosition + diceRoll) % totalSpaces;
+                setPlayerTwoHand({ ...playerTwoHand, space: newPosition })
                 return newPosition >= 40 ? newPosition - 40 : newPosition; // Reset to 0 if it reaches 39
             });
             setCurrentPlayer(1); // Switch to player one
@@ -99,8 +105,10 @@ export default function Board() {
                 <div className="space property"><div className='property-name'><p>x-Games</p><p>Price $400</p></div></div>
                 {/* Game Piece */}
 
+                <h2 className='player-turn'>Your turn player{currentPlayer}</h2>
 
                 {/* Game Pieces */}
+
                 <div id='playerOne' className={`game-piece position-${playerOneCurrentPosition}`}>🏃‍♂️</div>
                 <div id='playerTwo' className={`game-piece-2 position-${playerTwoCurrentPosition}`}>🏃‍♂️</div>
 
@@ -124,14 +132,9 @@ export default function Board() {
                     </h2>
                     <p>{BoardSpaces[playerTwoCurrentPosition].name}</p>
                     <p>{playerTwoHand.money}</p>
-                    <p> {playerTwoHand.properties}</p>
+                    <p>{playerTwoHand.properties}</p>
                 </div>
             </div>
-
-
-
-
-
         </div>
     )
 }

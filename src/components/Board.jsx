@@ -106,7 +106,6 @@ export default function Board() {
           </div>
         </div>
         <div className="space corner jail">Jail</div>
-
         {/* <!-- Right Column --> */}
         <div className="space property">
           <div className="property-name">
@@ -163,7 +162,6 @@ export default function Board() {
           </div>
         </div>
         <div className="space corner free-parking">Free Parking</div>
-
         {/* <!-- Bottom Row (reversed) --> */}
         <div className="space property">
           <div className="property-name">
@@ -219,7 +217,6 @@ export default function Board() {
           </div>
         </div>
         <div className="space corner go-to-jail">Go to Jail</div>
-
         {/* <!-- Left Column (reversed) --> */}
         <div className="space property">
           <div className="property-name">
@@ -274,11 +271,8 @@ export default function Board() {
           </div>
         </div>
         {/* Game Piece */}
-
         <h2 className="player-turn">Your turn player{currentPlayer}</h2>
-
         {/* Game Pieces */}
-
         <div
           id="playerOne"
           className={`game-piece position-${playerOneCurrentPosition}`}
@@ -292,14 +286,16 @@ export default function Board() {
           🏃‍♂️
         </div>
 
-        {/* Player One Button to Move */}
-        <div className="player-one-action">
-          <button onClick={movePiece}>Move</button>
-        </div>
-        {/* Player Two Button to Move */}
-        <div className="player-two-action">
-          <button onClick={movePiece}>Move</button>
-        </div>
+        {/* Player Buttons to Move */}
+        {currentPlayer === 1 ? (
+          <div className="player-one-action">
+            <button onClick={movePiece}>Move</button>
+          </div>
+        ) : (
+          <div className="player-two-action">
+            <button onClick={movePiece}>Move</button>
+          </div>
+        )}
 
         {/*player one cards*/}
         <div className="playerOne-status">
@@ -308,7 +304,6 @@ export default function Board() {
           <p>{playerOneHand.money}</p>
           <p>{playerOneHand.properties}</p>
         </div>
-
         {/*player two cards*/}
         <div className="playerTwo-status">
           <h2>Player Two Status</h2>

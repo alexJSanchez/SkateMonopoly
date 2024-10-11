@@ -156,3 +156,11 @@ body {
   grid-column: 6; grid-row: 6;
 }
 
+
+.dice{
+  text-align: center;
+  grid-column:6; grid-row: 8;
+}
+.dice-roll{
+  font-size: 25px;
+}

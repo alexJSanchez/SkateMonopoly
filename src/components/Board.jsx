@@ -4,9 +4,14 @@ import BoardSpaces from "../game/BoardSpaces.jsx"
 
 
 export default function Board() {
+
     // Set the current positions for both players
     const [playerOneCurrentPosition, setPlayerOneCurrentPosition] = useState(0);
     const [playerTwoCurrentPosition, setPlayerTwoCurrentPosition] = useState(0);
+
+    //Dice roll
+    const [dice, setDice] = useState(0)
+
     // Sets the each players hand
     const [playerOneHand, setPlayerOneHand] = useState(
         {
@@ -20,6 +25,7 @@ export default function Board() {
             money: 0,
             properties: []
         })
+
     // 1 for player one, 2 for player two
     const [currentPlayer, setCurrentPlayer] = useState(1);
 
@@ -28,8 +34,10 @@ export default function Board() {
 
     // Function to move the piece when the button is clicked
     const movePiece = () => {
+
         // Generate a random number between 1 and 6
         const diceRoll = Math.floor(Math.random() * 6) + 1;
+        setDice(diceRoll)
         console.log(diceRoll)
 
         if (currentPlayer === 1) {
@@ -103,12 +111,16 @@ export default function Board() {
                 <div className="space property"><div className='property-name'><p>Street Leauge</p><p>Price $350</p></div></div>
                 <div className="space property"><div className='property-name'><p>Skate Shoes</p><p>Price $75</p></div></div>
                 <div className="space property"><div className='property-name'><p>x-Games</p><p>Price $400</p></div></div>
-                {/* Game Piece */}
 
+                {/* Game Piece */}
                 <h2 className='player-turn'>Your turn player{currentPlayer}</h2>
+                {/* dice number */}
+                <div className='dice'>
+                    <h2>Dice Roll</h2>
+                    <p className='dice-roll'>{dice}</p>
+                </div>
 
                 {/* Game Pieces */}
-
                 <div id='playerOne' className={`game-piece position-${playerOneCurrentPosition}`}>🏃‍♂️</div>
                 <div id='playerTwo' className={`game-piece-2 position-${playerTwoCurrentPosition}`}>🏃‍♂️</div>
 

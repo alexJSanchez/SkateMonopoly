@@ -1,6 +1,7 @@
 // Pure game rules for Skate Monopoly. No React in here: the UI just
 // dispatches actions to `gameReducer` and renders the resulting state.
 import boardSpaces from "./BoardSpaces.jsx";
+import chanceCards from "./ChanceCards.js";
 
 export const PLAYER_NAMES = ["Player One", "Player Two"];
 export const STARTING_MONEY = 1500;
@@ -14,7 +15,23 @@ export const TAX_RATE = 0.1; // "Pay 10% or $X": the lower amount is charged
 
 export const rentFor = (space) => Math.round(space.price * RENT_RATE);
 
-export function createGame() {
+const SPACE_COUNT = boardSpaces.length;
+const JAIL_CARD_INDEX = chanceCards.cards.findIndex(
+  (c) => c.action === "grant_jail_immunity"
+);
+
+function shuffle(items) {
+  const a = [...items];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// `order` (optional) is the Chance deck as card indexes, top card first.
+// It exists so tests can use a fixed deck; normally the deck is shuffled.
+export function createGame(order) {
   return {
     players: PLAYER_NAMES.map(() => ({
       space: 0,
@@ -22,16 +39,20 @@ export function createGame() {
       properties: [], // indexes into boardSpaces
       inJail: false,
       jailAttempts: 0,
+      jailCards: 0, // Get Out of Jail Free cards being held
       bankrupt: false,
     })),
     turn: 0,
-    // "roll" -> waiting for a roll | "buy" -> deciding on a property | "gameover"
+    // "roll" -> waiting for a roll | "buy" -> deciding on a property |
+    // "card" -> a Chance card has been drawn and is waiting to be played | "gameover"
     phase: "roll",
     dice: null, // [a, b] from the most recent roll
     rollCount: 0, // increments every roll so the UI can replay the tumble
     roller: null, // index of the player who made the most recent roll
     doublesCount: 0,
-    pendingDouble: false, // did the roll that led to "buy" come up doubles?
+    pendingDouble: false, // did the roll that led to "buy" / "card" come up doubles?
+    deck: order ?? shuffle(chanceCards.cards.map((_, i) => i)), // draw from the front
+    card: null, // index of the Chance card waiting to be played
     winner: null,
     message: "Hit Skate to start the game!",
   };
@@ -53,7 +74,12 @@ const say = (state, text) => ({
 });
 
 function bankrupt(state, i) {
-  let s = patchPlayer(state, i, { bankrupt: true, money: 0, properties: [] });
+  let s = patchPlayer(state, i, {
+    bankrupt: true,
+    money: 0,
+    properties: [],
+    jailCards: 0,
+  });
   s = say(s, `${PLAYER_NAMES[i]} is bankrupt!`);
   const alive = s.players
     .map((p, idx) => (p.bankrupt ? -1 : idx))
@@ -104,11 +130,23 @@ function endTurn(state, rolledDouble) {
   return { ...state, turn: next, phase: "roll", doublesCount: 0 };
 }
 
-function moveAndResolve(state, total, rolledDouble) {
+// Take the top Chance card. The player reads it, then plays it with CARD_OK.
+// Cards go to the bottom of the deck, except the jail card, which is kept.
+function drawChance(state) {
+  const [index, ...rest] = state.deck;
+  const card = chanceCards.cards[index];
+  const deck = card.action === "grant_jail_immunity" ? rest : [...rest, index];
+  const s = { ...state, deck, card: index, phase: "card" };
+  return say(s, `Chance! "${card.text}"`);
+}
+
+// Move the current player to space `to` and resolve it.
+// opts.backwards: moved backwards, so SK8 salary is never paid.
+// opts.rentMultiplier: multiplies the clip fee if the other player owns it.
+// opts.diceTimes + opts.dice: instead pay dice total x diceTimes.
+function landOn(state, from, to, rolledDouble, opts = {}) {
   const i = state.turn;
-  const from = state.players[i].space;
-  const to = (from + total) % boardSpaces.length;
-  const passedStart = to < from; // wrapped around the board (or landed on SK8)
+  const passedStart = !opts.backwards && to < from; // wrapped past (or onto) SK8
   let s = patchPlayer(state, i, { space: to });
   const space = boardSpaces[to];
   const name = PLAYER_NAMES[i];
@@ -133,8 +171,16 @@ function moveAndResolve(state, total, rolledDouble) {
       } else if (owner === i) {
         s = say(s, "Your filmer is already here.");
       } else {
-        const rent = rentFor(space);
-        s = say(s, `Paid $${rent} clip fee to ${PLAYER_NAMES[owner]}'s filmer.`);
+        let rent;
+        if (opts.diceTimes) {
+          const total = opts.dice[0] + opts.dice[1];
+          rent = total * opts.diceTimes;
+          s = say(s, `Rolled ${total}: paid $${rent} to ${PLAYER_NAMES[owner]}'s filmer.`);
+        } else {
+          rent = rentFor(space) * (opts.rentMultiplier ?? 1);
+          const label = opts.rentMultiplier > 1 ? "double clip fee" : "clip fee";
+          s = say(s, `Paid $${rent} ${label} to ${PLAYER_NAMES[owner]}'s filmer.`);
+        }
         s = pay(s, i, owner, rent);
       }
       break;
@@ -149,8 +195,7 @@ function moveAndResolve(state, total, rolledDouble) {
       s = say(s, "Draw a Skate Trivia card! (cards coming soon)");
       break;
     case "chance":
-      s = say(s, "Draw a Chance card! (cards coming soon)");
-      break;
+      return drawChance({ ...s, pendingDouble: rolledDouble });
     case "corner":
       if (space.corner === "go-to-jail") s = sendToJail(s, i);
       break;
@@ -160,8 +205,85 @@ function moveAndResolve(state, total, rolledDouble) {
   return endTurn(s, rolledDouble);
 }
 
+function moveAndResolve(state, total, rolledDouble) {
+  const from = state.players[state.turn].space;
+  return landOn(state, from, (from + total) % SPACE_COUNT, rolledDouble);
+}
+
+// First space (counting forward from `from`) whose name is in `targets`.
+function nearestForward(from, targets) {
+  for (let step = 1; step <= SPACE_COUNT; step++) {
+    const index = (from + step) % SPACE_COUNT;
+    if (targets.includes(boardSpaces[index].name)) return index;
+  }
+  return from;
+}
+
+// Play the Chance card the current player drew.
+function playChanceCard(state, dice) {
+  const card = chanceCards.cards[state.card];
+  const i = state.turn;
+  const from = state.players[i].space;
+  const double = state.pendingDouble;
+  const name = PLAYER_NAMES[i];
+  let s = { ...state, card: null, phase: "roll", message: "" };
+
+  switch (card.action) {
+    case "move_to_space": {
+      const to = boardSpaces.findIndex((sp) => sp.name === card.destination);
+      return landOn(s, from, to, double);
+    }
+    case "move_to_nearest_railroad": // nearest skateboard brand: double clip fee
+    case "move_to_nearest_utility": { // nearest shop: dice total x 10
+      const to = nearestForward(from, card.targets);
+      const opts = card.rent_multiplier_dice
+        ? { diceTimes: card.rent_multiplier_dice, dice }
+        : { rentMultiplier: card.rent_multiplier ?? 1 };
+      return landOn(s, from, to, double, opts);
+    }
+    case "move_relative": {
+      const to = (from + card.spaces + SPACE_COUNT) % SPACE_COUNT;
+      return landOn(s, from, to, double, { backwards: card.spaces < 0 });
+    }
+    case "go_to_jail":
+      return endTurn(sendToJail(s, i), false);
+    case "collect_money":
+      s = patchPlayer(s, i, { money: s.players[i].money + card.amount });
+      return endTurn(say(s, `${name} collected $${card.amount}.`), double);
+    case "pay_money":
+      s = say(s, `${name} paid $${card.amount} to the bank.`);
+      return endTurn(pay(s, i, null, card.amount), double);
+    case "pay_per_property": {
+      const count = s.players[i].properties.length;
+      const cost = count * card.cost_per_property;
+      s = say(
+        s,
+        count === 0
+          ? `${name} has no spots, so there's nothing to reupload.`
+          : `${name} paid $${cost} to reupload ${count} spot${count > 1 ? "s" : ""}.`
+      );
+      return endTurn(pay(s, i, null, cost), double);
+    }
+    case "pay_each_player": {
+      for (let j = 0; j < s.players.length; j++) {
+        if (j === i || s.players[j].bankrupt) continue;
+        s = say(s, `${name} paid $${card.amount_per_player} to ${PLAYER_NAMES[j]}.`);
+        s = pay(s, i, j, card.amount_per_player);
+        if (s.players[i].bankrupt) break;
+      }
+      return endTurn(s, double);
+    }
+    case "grant_jail_immunity":
+      s = patchPlayer(s, i, { jailCards: s.players[i].jailCards + 1 });
+      return endTurn(say(s, `${name} keeps a Get Out of Jail Free card.`), double);
+    default:
+      return endTurn(s, double);
+  }
+}
+
 // ---------- reducer ----------
-// Actions: { type: "ROLL", dice: [a, b] } | "BUY" | "SKIP" | "PAY_JAIL" | "RESET"
+// Actions: { type: "ROLL", dice: [a, b] } | "BUY" | "SKIP" | "PAY_JAIL" |
+//          "USE_JAIL_CARD" | { type: "CARD_OK", dice: [a, b] } | "RESET"
 
 export function gameReducer(state, action) {
   const i = state.turn;
@@ -227,12 +349,31 @@ export function gameReducer(state, action) {
       return endTurn(s, state.pendingDouble);
     }
 
+    case "CARD_OK":
+      if (state.phase !== "card") return state;
+      return playChanceCard(state, action.dice ?? [1, 1]);
+
     case "PAY_JAIL": {
       const p = state.players[i];
       if (state.phase !== "roll" || !p.inJail || p.money < JAIL_FEE) return state;
       let s = pay(state, i, null, JAIL_FEE);
       s = patchPlayer(s, i, { inJail: false, jailAttempts: 0 });
       return { ...s, message: `${name} paid $${JAIL_FEE} and left jail. Skate to move.` };
+    }
+
+    case "USE_JAIL_CARD": {
+      const p = state.players[i];
+      if (state.phase !== "roll" || !p.inJail || p.jailCards < 1) return state;
+      const s = patchPlayer(state, i, {
+        inJail: false,
+        jailAttempts: 0,
+        jailCards: p.jailCards - 1,
+      });
+      return {
+        ...s,
+        deck: [...s.deck, JAIL_CARD_INDEX], // the used card goes back in the deck
+        message: `${name} used a Get Out of Jail Free card. Skate to move.`,
+      };
     }
 
     case "RESET":

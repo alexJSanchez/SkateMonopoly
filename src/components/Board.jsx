@@ -225,6 +225,7 @@ export default function Board() {
                 <>
                   <p>📍 {boardSpaces[p.space].name}</p>
                   <p>💵 ${p.money}</p>
+                  {p.jailCards > 0 && <p>🎟️ Get Out of Jail Free ×{p.jailCards}</p>}
                   {p.inJail && (
                     <p>
                       🔒 In jail (attempt {p.jailAttempts}/{MAX_JAIL_ATTEMPTS})
@@ -343,6 +344,14 @@ export default function Board() {
                     <button className="roll-button" onClick={roll}>
                       {current.inJail ? "Skate for doubles" : "Skate 🛹"}
                     </button>
+                    {current.inJail && current.jailCards > 0 && (
+                      <button
+                        className="secondary-button"
+                        onClick={() => act({ type: "USE_JAIL_CARD" })}
+                      >
+                        Use Get Out of Jail Free 🎟️
+                      </button>
+                    )}
                     {current.inJail && (
                       <button
                         className="secondary-button"
@@ -353,6 +362,16 @@ export default function Board() {
                       </button>
                     )}
                   </>
+                )}
+                {phase === "card" && (
+                  <button
+                    className="roll-button"
+                    onClick={() =>
+                      act({ type: "CARD_OK", dice: [rollDie(), rollDie()] })
+                    }
+                  >
+                    Play card 🎴
+                  </button>
                 )}
                 {phase === "buy" && (
                   <>

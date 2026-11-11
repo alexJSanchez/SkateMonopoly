@@ -1342,3 +1342,72 @@ body {
   padding-bottom: 0.3em;
 }
 .iso-board .space[class*="owned-p"] { padding-bottom: 1.1em; }
+
+/* ---------- location card over a player's head ---------- */
+.loc-card {
+  position: relative;
+  width: 15em;
+  font-size: calc(var(--board-size) / 55);
+  background: #fff;
+  color: #1b1b1b;
+  border: 3px solid #1b1b1b;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  animation: bubble-pop 0.25s ease-out;
+}
+.loc-img {
+  display: block;
+  width: 100%;
+  height: 7.5em;
+  object-fit: cover; /* crop to the card */
+  background: #ddd;
+}
+.loc-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3em;
+  background: #fdf6e3;
+}
+.loc-placeholder[class*="group-"] { background: #cfd8e3; }
+.loc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  padding: 0.5em 0.7em 0.6em;
+  font-size: 0.9em;
+  line-height: 1.25;
+}
+.loc-name { font-size: 1.1em; }
+.loc-owner { /* owner's colour along the card's bottom edge */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0.45em;
+}
+.loc-owner.p0 { background: #2b6cb0; }
+.loc-owner.p1 { background: #c53030; }
+/* the card has no tail; the speech bubble below it does */
+
+/* compact card, and leave headroom above the piece so card + bubble fit on screen */
+.loc-card { width: 13em; font-size: calc(var(--board-size) / 62); }
+.loc-img { height: 5.5em; }
+.loc-info { padding: 0.4em 0.6em 0.55em; }
+.game .iso-viewport { padding-top: 30vh; box-sizing: border-box; }
+
+/* the card of the player who just went holds, then fades up and away as the turn hands over */
+.loc-card.leaving { animation: loc-leave 1.9s ease forwards; }
+@keyframes loc-leave {
+  0%, 60% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-0.8em); }
+}
+
+/* pressing Next: a quick fade, then the camera moves on */
+.loc-card.leaving { animation: loc-leave 0.35s ease forwards; }
+@keyframes loc-leave {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-0.8em); }
+}

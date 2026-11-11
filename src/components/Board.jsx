@@ -13,6 +13,7 @@ import {
   upgradeCostFor,
 } from "../game/rules.js";
 import { cellCenter, cellTopEdge } from "../game/layout.js";
+import { locationImage } from "../game/locationImages.js";
 
 // Which of the 9 cells in a 3x3 grid hold a pip for each face value.
 const PIPS = {
@@ -63,6 +64,8 @@ const rollDie = () => Math.floor(Math.random() * 6) + 1;
 
 const DICE_MS = 1300; // dice tumble above the head, then a beat before moving
 const STEP_MS = 220; // time a piece spends on each space (matches the CSS glide + hop)
+const FADE_MS = 350; // the card fades out when Next is pressed
+const PAN_MS = 800; // camera glide to the next player, before their bubble appears
 const MAX_WALK = 12; // longer jumps (e.g. Go to Jail) teleport instead of walking
 const FOLLOW_ZOOM = 1.35;
 const MIN_ZOOM = 0.4;
@@ -208,6 +211,73 @@ function Tape3D() {
   );
 }
 
+// The lines of info shown on a location card: price, who has a camera or
+// tape there, the current clip fee, and what an upgrade would cost.
+function locationLines(game, index) {
+  const space = boardSpaces[index];
+  switch (space.type) {
+    case "property": {
+      const owner = ownerOf(game, index);
+      if (owner < 0) {
+        return [
+          `Hire a filmer: $${space.price}`,
+          `Camera clip fee: $${rentFor(space)}`,
+        ];
+      }
+      const isTape = game.tapes.includes(index);
+      const lines = [
+        `${isTape ? "📼 Film tape" : "📹 Camera"} · ${PLAYER_NAMES[owner]}`,
+        `Clip fee: $${rentAt(game, index)}`,
+      ];
+      lines.push(
+        isTape
+          ? "Fully filmed (no upgrade left)"
+          : `Second trick: $${upgradeCostFor(space)} → tape`
+      );
+      return lines;
+    }
+    case "tax":
+      return [`Pay 10% or $${space.tax}`, "(the lower amount)"];
+    case "trivia":
+      return ["Skate Trivia", "Pick up a card"];
+    case "chance":
+      return ["Chance", "Draw a card"];
+    default:
+      if (space.corner === "go") return ["Collect $200 for passing"];
+      if (space.corner === "jail") return ["Just visiting, or in jail"];
+      if (space.corner === "go-to-jail") return ["Go directly to jail"];
+      return ["Take a breather"];
+  }
+}
+
+const SPACE_ICONS = { chance: "❓", trivia: "🧠", tax: "💸", corner: "🏁" };
+
+// The card shown over a player's head when they land: the spot's photo
+// (cropped to fit) with its name and info underneath.
+function LocationCard({ game, index, leaving }) {
+  const space = boardSpaces[index];
+  const image = locationImage(index);
+  const owner = ownerOf(game, index);
+  return (
+    <div className={`loc-card${leaving ? " leaving" : ""}`}>
+      {image ? (
+        <img className="loc-img" src={image} alt="" draggable="false" />
+      ) : (
+        <div className={`loc-img loc-placeholder ${space.group ? `group-${space.group}` : ""}`}>
+          {SPACE_ICONS[space.type] ?? "📷"}
+        </div>
+      )}
+      <div className="loc-info">
+        <strong className="loc-name">{space.name}</strong>
+        {locationLines(game, index).map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </div>
+      {owner >= 0 && <i className={`loc-owner p${owner}`} />}
+    </div>
+  );
+}
+
 function spaceDetail(space) {
   switch (space.type) {
     case "property":
@@ -249,6 +319,35 @@ export default function Board() {
   const walkingIdx = holding ? -1 : movingIdx;
   const busy = holding || movingIdx >= 0;
 
+  // The turn is handed over when the player presses Next: the player who just
+  // went keeps their location card with a Next button; pressing it fades the
+  // card out, the camera glides to the next player, and only then does their
+  // bubble appear. `uiTurn` is the player the screen is currently about; it
+  // lags `turn` until Next is pressed.
+  const [uiTurn, setUiTurn] = useState(turn);
+  const [bubbleFor, setBubbleFor] = useState(turn);
+  const [leaving, setLeaving] = useState(false); // the card is fading out
+  const handingOff = uiTurn !== turn;
+  const handoffTimer = useRef(null);
+  useEffect(() => () => clearTimeout(handoffTimer.current), []);
+  const nextPlayer = () => {
+    setLeaving(true);
+    clearTimeout(handoffTimer.current);
+    handoffTimer.current = setTimeout(() => {
+      setUiTurn(turn);
+      setLeaving(false);
+    }, FADE_MS);
+  };
+  // A bankrupt player has no piece to hold a Next button, so skip ahead.
+  useEffect(() => {
+    if (handingOff && !busy && players[uiTurn].bankrupt) setUiTurn(turn);
+  }, [handingOff, busy, players, uiTurn, turn]);
+  useEffect(() => {
+    if (handingOff || bubbleFor === turn) return undefined;
+    const timer = setTimeout(() => setBubbleFor(turn), PAN_MS);
+    return () => clearTimeout(timer);
+  }, [handingOff, bubbleFor, turn]);
+
   useEffect(() => {
     if (holding || movingIdx < 0) return undefined;
     const target = players[movingIdx].space;
@@ -265,12 +364,16 @@ export default function Board() {
   }, [shown, players, movingIdx, holding]);
 
   // The camera follows whoever is rolling/moving, otherwise whoever's turn it is.
-  const focus = holding ? roller : movingIdx >= 0 ? movingIdx : turn;
+  const focus = holding ? roller : movingIdx >= 0 ? movingIdx : uiTurn;
   const focusPoint = cellCenter(shown[focus]);
   const camera = autoFollow ? focusPoint : pan;
 
   const act = (action) => {
     setAutoFollow(true); // new action: look at the result
+    if (action.type === "RESET") {
+      setUiTurn(0);
+      setBubbleFor(0);
+    }
     if (action.type === "ROLL") {
       setHolding(true);
       clearTimeout(holdTimer.current);
@@ -338,7 +441,7 @@ export default function Board() {
             <div
               key={i}
               className={`status-card${
-                i === turn && phase !== "gameover" ? " current" : ""
+                i === uiTurn && phase !== "gameover" ? " current" : ""
               }${p.bankrupt ? " bankrupt" : ""}`}
             >
               <h2>
@@ -462,9 +565,26 @@ export default function Board() {
             const showBubble =
               !busy &&
               ((phase === "gameover" && i === winner) ||
-                (phase !== "gameover" && i === turn));
+                (phase !== "gameover" &&
+                  i === turn &&
+                  !handingOff &&
+                  bubbleFor === turn));
             // The dice hover above the head of whoever rolled, until they land.
             const showDice = busy && i === roller && dice;
+            // Once they've landed, whoever just moved shows a card for their space.
+            // Once their moves are done, the player who just went gets a Next button.
+            const showNext =
+              handingOff &&
+              !busy &&
+              !leaving &&
+              i === uiTurn &&
+              phase !== "gameover";
+            // The card stays while they decide, and until they press Next.
+            const showCard =
+              !busy &&
+              game.roller === i &&
+              phase !== "gameover" &&
+              (i === turn || handingOff);
             const bubble = showBubble && (
               <div className="speech-bubble">
                 {phase === "roll" && (
@@ -503,9 +623,6 @@ export default function Board() {
                 )}
                 {phase === "buy" && (
                   <>
-                    <p className="bubble-text">
-                      {currentSpace.name} · ${currentSpace.price}
-                    </p>
                     <button
                       className="roll-button"
                       onClick={() => act({ type: "BUY" })}
@@ -564,7 +681,7 @@ export default function Board() {
                   <div className={`piece-body p${i}`}>
                     <span className="piece-emoji">🛹</span>
                     <span className="piece-num">{i + 1}</span>
-                    {(showDice || bubble) && (
+                    {(showDice || bubble || showCard || showNext) && (
                       <div className="head-stack">
                         {showDice && (
                           <div className="head-dice" aria-hidden="true">
@@ -572,7 +689,22 @@ export default function Board() {
                             <Die value={dice[1]} rollKey={`b${game.rollCount}`} />
                           </div>
                         )}
+                        {showCard && (
+                          <LocationCard
+                            key={`${game.rollCount}-${p.space}`}
+                            game={game}
+                            index={p.space}
+                            leaving={leaving && i === uiTurn}
+                          />
+                        )}
                         {bubble}
+                        {showNext && (
+                          <div className="speech-bubble">
+                            <button className="roll-button" onClick={nextPlayer}>
+                              Next player ▶
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

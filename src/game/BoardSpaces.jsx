@@ -1,165 +1,46 @@
+// group colours the top band of a property (see App.css .group-*)
+// type: "corner" | "property" | "trivia" | "chance" | "tax"
 const boardSpaces = [
-  {
-    name: "SK8",
-    collect: true,
-  },
-  {
-    name: "Venice Beach USA",
-    price: 50,
-  },
-  {
-    name: "Skate Trivia",
-    price: 0,
-    trivia: true,
-  },
-  {
-    name: "Burnside",
-    price: 50,
-  },
-  {
-    name: "New Setup",
-    price: 100,
-  },
-  {
-    name: "Element Skateboards",
-    price: 200,
-  },
-  {
-    name: "Shaw Millenium",
-    price: 100,
-  },
-  {
-    name: "Chance Card",
-    price: 0,
-    chance: true,
-  },
-  {
-    name: "Big O Canada",
-    price: 100,
-  },
-  {
-    name: "Downtown Plaza Canada",
-    price: 120,
-  },
-  {
-    name: "Jail",
-    jail: true,
-  },
-  {
-    name: "Gulliver SkatePark Spain",
-    price: 140,
-  },
-  {
-    name: "Supreme",
-    price: 150,
-  },
-  {
-    name: "Macba Spain",
-    price: 140,
-  },
-  {
-    name: "Skatepark Church Spain",
-    price: 160,
-  },
-  {
-    name: "Plan B Skateboards",
-    price: 200,
-  },
-  {
-    name: "Guangzhou China",
-    price: 180,
-  },
-  {
-    name: "Skate Trivia",
-    trivia: true,
-  },
-  {
-    name: "Lai Chi China",
-    price: 180,
-  },
-  {
-    name: "Red Ribbon China",
-    price: 200,
-  },
-  {
-    name: "Free Parking",
-    parking: true,
-  },
-  {
-    name: "North Brigade Germany",
-    price: 220,
-  },
-  {
-    name: "Chance",
-    chance: true,
-  },
-  {
-    name: "Skatehalle Germany",
-    price: 220,
-  },
-  {
-    name: "Hirshgarten Skatepark Germany",
-    price: 200,
-  },
-  {
-    name: "Girl Skateboards",
-    price: 200,
-  },
-  {
-    name: "Nike Tempo Mexico",
-    price: 250,
-  },
-  {
-    name: "La Duna Mexico",
-    price: 250,
-  },
-  {
-    name: "Tampa Skateshop",
-    price: 120,
-  },
-  {
-    name: "La Mexicana Mexico",
-    price: 280,
-  },
-  {
-    name: "Go To Jail",
-    jail: true,
-  },
-  {
-    name: "USU Skatepark Africa",
-    price: 300,
-  },
-  {
-    name: "Shangalla Skatepark Africa",
-    price: 300,
-  },
-  {
-    name: "Skatepark Trivia",
-    trivia: true,
-  },
-  {
-    name: "Kgali Skatepark Africa",
-    price: 320,
-  },
-  {
-    name: "Zero Skateboards",
-    price: 200,
-  },
-  {
-    name: "Chance",
-    chance: true,
-  },
-  {
-    name: "Street Leauge",
-    price: 350,
-  },
-  {
-    name: "Skate Shoes",
-    price: 75,
-  },
-  {
-    name: "Xgames",
-    price: 400,
-  },
+  { name: "SK8", type: "corner", corner: "go" },
+  { name: "Venice Beach USA", type: "property", price: 50, group: "usa" },
+  { name: "Skate Trivia", type: "trivia" },
+  { name: "Burnside", type: "property", price: 50, group: "other" },
+  { name: "New Setup", type: "tax", tax: 200 },
+  { name: "Element Skateboards", type: "property", price: 200, group: "brand" },
+  { name: "Shaw Millennium Canada", type: "property", price: 100, group: "canada" },
+  { name: "Chance", type: "chance" },
+  { name: "Big O Canada", type: "property", price: 100, group: "canada" },
+  { name: "Downtown Plaza Canada", type: "property", price: 120, group: "canada" },
+  { name: "Jail", type: "corner", corner: "jail" },
+  { name: "Gulliver SkatePark Spain", type: "property", price: 140, group: "spain" },
+  { name: "Supreme", type: "property", price: 150, group: "brand" },
+  { name: "Macba Spain", type: "property", price: 140, group: "spain" },
+  { name: "Skatepark Church Spain", type: "property", price: 160, group: "spain" },
+  { name: "Plan B Skateboards", type: "property", price: 200, group: "brand" },
+  { name: "Guangzhou China", type: "property", price: 180, group: "china" },
+  { name: "Skate Trivia", type: "trivia" },
+  { name: "Lai Chi China", type: "property", price: 180, group: "china" },
+  { name: "Red Ribbon China", type: "property", price: 200, group: "china" },
+  { name: "Free Parking", type: "corner", corner: "free-parking" },
+  { name: "North Brigade Germany", type: "property", price: 220, group: "germany" },
+  { name: "Chance", type: "chance" },
+  { name: "Skatehalle Germany", type: "property", price: 220, group: "germany" },
+  { name: "Hirshgarten Skatepark Germany", type: "property", price: 200, group: "germany" },
+  { name: "Girl Skateboards", type: "property", price: 200, group: "brand" },
+  { name: "Nike Tempo Mexico", type: "property", price: 250, group: "mexico" },
+  { name: "La Duna Mexico", type: "property", price: 250, group: "mexico" },
+  { name: "Tampa Skateshop", type: "property", price: 120, group: "other" },
+  { name: "La Mexicana Mexico", type: "property", price: 280, group: "mexico" },
+  { name: "Go to Jail", type: "corner", corner: "go-to-jail" },
+  { name: "USU Skatepark Africa", type: "property", price: 300, group: "africa" },
+  { name: "Shangalla Skatepark Africa", type: "property", price: 300, group: "africa" },
+  { name: "Skate Trivia", type: "trivia" },
+  { name: "Kgali Skatepark Africa", type: "property", price: 320, group: "africa" },
+  { name: "Zero Skateboards", type: "property", price: 200, group: "brand" },
+  { name: "Chance", type: "chance" },
+  { name: "Street League", type: "property", price: 350, group: "other" },
+  { name: "Skate Shoes", type: "property", price: 75, group: "other" },
+  { name: "X-Games", type: "property", price: 400, group: "other" },
 ];
+
 export default boardSpaces;

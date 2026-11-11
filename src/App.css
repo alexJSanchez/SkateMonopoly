@@ -2,27 +2,82 @@ body {
   font-family: Arial, sans-serif;
 }
 
+.game {
+  width: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  color: #1b1b1b;
+}
+.game-title {
+  text-align: center;
+  margin: 0 0 8px;
+  color: inherit;
+  font-size: 1.8rem;
+}
+@media (prefers-color-scheme: dark) {
+  .game-title { color: #f2f2f2; }
+}
+
 .board {
   display: grid;
-  grid-template-columns: repeat(11, 1fr);
-  grid-template-rows: repeat(11, 1fr);
-  width: auto;
-  height: auto;
-  margin: 50px auto;
-  border: 2px solid black;
-}
-.player-turn {
-  text-align: center;
-  grid-row: 2;
-  grid-column: 6;
+  grid-template-columns: 1.4fr repeat(9, 1fr) 1.4fr;
+  grid-template-rows: 1.4fr repeat(9, 1fr) 1.4fr;
+  width: min(96vw, 1100px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  border: 3px solid #1b1b1b;
+  background: #cfe8d5;
+  position: relative;
 }
 
 .space {
-  border: 1px solid black;
-  padding: 10px;
+  position: relative;
+  border: 1px solid #1b1b1b;
+  padding: 14px 4px 4px;
   text-align: center;
   box-sizing: border-box;
+  background: #fdf6e3;
+  color: #1b1b1b;
+  font-size: clamp(8px, 1vw, 12px);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.space p { margin: 0; }
+.space .property-name p:first-child { font-weight: 700; }
+.space .icon { display: block; font-size: 1.6em; }
+.space.corner {
+  background: #ffe9a8;
+  font-weight: 700;
+  font-size: clamp(9px, 1.3vw, 15px);
+  padding: 4px;
+}
+.space.go-to-jail, .space.jail { background: #f4b6b0; }
+.space.free-parking { background: #bfe3f5; }
+.space.active { outline: 4px solid gold; outline-offset: -4px; z-index: 1; }
+
+/* colour band per country / group */
+.space[class*="group-"]::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 10px;
+}
+.group-usa::before { background: #d62828; }
+.group-canada::before { background: #f77f00; }
+.group-spain::before { background: #fcbf49; }
+.group-china::before { background: #c1121f; }
+.group-germany::before { background: #3a86ff; }
+.group-mexico::before { background: #2a9d8f; }
+.group-africa::before { background: #6a994e; }
+.group-brand::before { background: #222; }
+.group-other::before { background: #8d99ae; }
+.space.chance { background: #ffd9b3; }
+.space.trivia { background: #d9d2ff; }
+.space.tax { background: #f4c2c2; }
+
+
 
 /* Corner spaces */
 .space.corner {
@@ -364,50 +419,76 @@ body {
 }
 /* Continue this pattern for each space on the board */
 
-/* player status cards */
-.playerOne-status {
-  text-align: center;
-  grid-column: 4;
-  grid-row: 3;
-}
-.playerTwo-status {
-  text-align: center;
-  grid-column: 8;
-  grid-row: 3;
-}
-
-/* Positioning the game piece using grid properties */
-.game-piece {
-  display: flex; /* Allows width/height to take effect */
+/* ---------- centre control panel ---------- */
+.center-panel {
+  grid-column: 2 / 11;
+  grid-row: 2 / 11;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  font-size: 60px; /* Sets the size of the emoji */
-  line-height: 60px; /* Centers the emoji vertically */
+  justify-content: center;
+  gap: 14px;
+  padding: 12px;
+  color: #1b1b1b;
+  min-width: 0;
 }
-.game-piece-2 {
-  display: flex; /* Allows width/height to take effect */
-  align-items: end;
-  font-size: 60px; /* Sets the size of the emoji */
-  line-height: 60px; /* Centers the emoji vertically */
+.turn-banner {
+  margin: 0;
+  padding: 6px 18px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: clamp(14px, 2vw, 24px);
 }
+.turn-banner.p0, .badge.p0, .piece.p0 { background: #2b6cb0; }
+.turn-banner.p1, .badge.p1, .piece.p1 { background: #c53030; }
 
-.player-one-action {
+.roll-area { display: flex; align-items: center; gap: 16px; }
+.dice-face {
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 1;
+  min-width: 1.1em;
   text-align: center;
-  grid-column: 4;
-  grid-row: 4;
 }
+.roll-button {
+  font-size: clamp(14px, 1.8vw, 20px);
+  font-weight: 700;
+  color: #fff;
+  background: #2f855a;
+  padding: 0.7em 1.6em;
+}
+.roll-button:hover { background: #276749; border-color: #1b1b1b; }
+.event-log { margin: 0; min-height: 1.5em; text-align: center; font-size: clamp(12px, 1.4vw, 16px); }
 
-<<<<<<< HEAD
+.status-cards { display: flex; gap: 16px; width: 100%; justify-content: center; flex-wrap: wrap; }
+.status-card {
+  flex: 1 1 180px;
+  max-width: 260px;
+  background: #fff;
+  border: 3px solid transparent;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: clamp(11px, 1.3vw, 15px);
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.status-card.current { border-color: gold; box-shadow: 0 0 10px gold; }
+.status-card h2 { margin: 0 0 4px; font-size: 1.15em; display: flex; align-items: center; gap: 6px; }
+.status-card p { margin: 2px 0; }
+.badge { display: inline-block; width: 1.2em; height: 1.2em; border-radius: 50%; }
 
-.dice{
-  text-align: center;
-  grid-column:6; grid-row: 8;
+/* ---------- player tokens ---------- */
+.piece {
+  z-index: 2;
+  width: clamp(18px, 2.6vw, 32px);
+  height: clamp(18px, 2.6vw, 32px);
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(10px, 1.6vw, 18px);
+  pointer-events: none;
+  transition: none;
 }
-.dice-roll{
-  font-size: 25px;
-=======
-.player-two-action {
-  text-align: center;
-  grid-column: 8;
-  grid-row: 4;
->>>>>>> 28a79568a7f18a53370feed2333fdd37dc618540
-}
+.piece.p0 { align-self: end; justify-self: start; margin: 4px; }
+.piece.p1 { align-self: end; justify-self: end; margin: 4px; }

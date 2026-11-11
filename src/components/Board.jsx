@@ -1,316 +1,144 @@
-import React, { useState } from "react";
-import BoardSpaces from "../game/BoardSpaces.jsx";
+import { useState } from "react";
+import boardSpaces from "../game/BoardSpaces.jsx";
+
+const STARTING_MONEY = 1500;
+const PLAYER_NAMES = ["Player One", "Player Two"];
+const DICE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+const TYPE_ICONS = { chance: "❓", trivia: "🧠", tax: "💸" };
+
+const initialPlayers = () =>
+  PLAYER_NAMES.map(() => ({ space: 0, money: STARTING_MONEY, properties: [] }));
+
+function spaceDetail(space) {
+  switch (space.type) {
+    case "property":
+      return `Price $${space.price}`;
+    case "trivia":
+      return "Pick Up Card";
+    case "tax":
+      return `Pay 10% or $${space.tax}`;
+    default:
+      return null;
+  }
+}
+
+function describeLanding(space) {
+  switch (space.type) {
+    case "property":
+      return `${space.name} is for sale for $${space.price}.`;
+    case "trivia":
+      return "Draw a Skate Trivia card!";
+    case "chance":
+      return "Draw a Chance card!";
+    case "tax":
+      return `Pay 10% or $${space.tax}.`;
+    default:
+      return null;
+  }
+}
 
 export default function Board() {
-  // Set the current positions for both players
-  const [playerOneCurrentPosition, setPlayerOneCurrentPosition] = useState(0);
-  const [playerTwoCurrentPosition, setPlayerTwoCurrentPosition] = useState(0);
-  // Sets the each players hand
-  const [playerOneHand, setPlayerOneHand] = useState({
-    space: playerOneCurrentPosition,
-    money: 0,
-    properties: [],
-  });
-  const [playerTwoHand, setPlayerTwoHand] = useState({
-    space: playerTwoCurrentPosition,
-    money: 0,
-    properties: [],
-  });
-  // 1 for player one, 2 for player two
-  const [currentPlayer, setCurrentPlayer] = useState(1);
+  const [players, setPlayers] = useState(initialPlayers);
+  // Index into players: 0 = player one, 1 = player two
+  const [turn, setTurn] = useState(0);
+  // { player, roll, space } for the most recent move
+  const [lastMove, setLastMove] = useState(null);
 
-  // Total spaces on the board
-  const totalSpaces = 40;
-
-  // Function to move the piece when the button is clicked
   const movePiece = () => {
-    // Generate a random number between 1 and 6
-    const diceRoll = Math.floor(Math.random() * 6) + 1;
-    console.log(diceRoll);
-
-    if (currentPlayer === 1) {
-      setPlayerOneCurrentPosition((prevPosition) => {
-        const newPosition = (prevPosition + diceRoll) % totalSpaces;
-        setPlayerOneHand({ ...playerOneHand, space: newPosition });
-        return newPosition >= 40 ? newPosition - 40 : newPosition; // Reset to 0 if it reaches 39
-      });
-      setCurrentPlayer(2); // Switch to player two
-    } else {
-      setPlayerTwoCurrentPosition((prevPosition) => {
-        const newPosition = (prevPosition + diceRoll) % totalSpaces;
-        setPlayerTwoHand({ ...playerTwoHand, space: newPosition });
-        return newPosition >= 40 ? newPosition - 40 : newPosition; // Reset to 0 if it reaches 39
-      });
-      setCurrentPlayer(1); // Switch to player one
-    }
-
-    console.log(`Player ${currentPlayer} rolled a ${diceRoll}`); // Optional: Log the dice roll
+    const roll = Math.floor(Math.random() * 6) + 1;
+    const to = (players[turn].space + roll) % boardSpaces.length;
+    setLastMove({ player: turn, roll, space: to });
+    setPlayers((prev) =>
+      prev.map((p, i) => (i === turn ? { ...p, space: to } : p))
+    );
+    setTurn((t) => (t + 1) % players.length);
   };
 
+  const landed = lastMove ? boardSpaces[lastMove.space] : null;
+
   return (
-    <div>
+    <div className="game">
+      <h1 className="game-title">🛹 Skate Monopoly</h1>
+      {/* The first 40 children must be the spaces: App.css positions them with nth-child */}
       <div className="board">
-        {/* <!-- Top Row --> */}
-        <div className="space corner go">SK8</div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Venice Beach USA</p>
-            <p>price $50</p>
+        {boardSpaces.map((space, i) => {
+          const classes = [
+            "space",
+            space.type === "corner" ? `corner ${space.corner}` : space.type,
+            space.group ? `group-${space.group}` : "",
+            players[turn].space === i ? "active" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          return (
+            <div key={i} className={classes}>
+              <div className="property-name">
+                {TYPE_ICONS[space.type] && (
+                  <span className="icon">{TYPE_ICONS[space.type]}</span>
+                )}
+                <p>{space.name}</p>
+                {spaceDetail(space) && <p>{spaceDetail(space)}</p>}
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="center-panel">
+          <h2 className={`turn-banner p${turn}`}>{PLAYER_NAMES[turn]}&apos;s turn</h2>
+
+          <div className="roll-area">
+            <span className="dice-face" aria-hidden="true">
+              {lastMove ? DICE_FACES[lastMove.roll - 1] : "🎲"}
+            </span>
+            <button className="roll-button" onClick={movePiece}>
+              Roll dice
+            </button>
           </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Skate Trivia</p>
-            <p>Pick Up Card</p>
+
+          <p className="event-log" aria-live="polite">
+            {lastMove ? (
+              <>
+                <strong>{PLAYER_NAMES[lastMove.player]}</strong> rolled a{" "}
+                {lastMove.roll} and landed on <strong>{landed.name}</strong>.{" "}
+                {describeLanding(landed)}
+              </>
+            ) : (
+              "Roll the dice to start the game!"
+            )}
+          </p>
+
+          <div className="status-cards">
+            {players.map((p, i) => (
+              <div
+                key={i}
+                className={`status-card${i === turn ? " current" : ""}`}
+              >
+                <h2>
+                  <span className={`badge p${i}`} /> {PLAYER_NAMES[i]}
+                </h2>
+                <p>📍 {boardSpaces[p.space].name}</p>
+                <p>💵 ${p.money}</p>
+                <p>
+                  🏠{" "}
+                  {p.properties.length
+                    ? p.properties.join(", ")
+                    : "No properties yet"}
+                </p>
+              </div>
+            ))}
           </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Burnside</p>
-            <p>Price $50</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>New Setup</p>
-            <p>Pay 10% or $200</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Element Skateboards</p>
-            <p>Price $200</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Shaw Millenium Canada</p>
-            <p>Price $100</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Chance Card</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Big O Canada</p>
-            <p>Price $100</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Downtown Plaza Canada</p>
-            <p>Price $120</p>
-          </div>
-        </div>
-        <div className="space corner jail">Jail</div>
-        {/* <!-- Right Column --> */}
-        <div className="space property">
-          <div className="property-name">
-            <p>Gulliver SkatePark Spain</p>
-            <p>Price $140</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Supreme</p>
-            <p>Price $150</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Macba Spain</p>
-            <p>Price $140</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Skatepark Church Spain</p>
-            <p>Price $160</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Plan B Skateboards</p>
-            <p>Price $200</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Guangzhou China</p>
-            <p>Price $180</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Skate Trivia</p>
-            <p>Pick Up Card</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Lai Chi China</p>
-            <p>Price $180</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Red Ribbon China</p>
-            <p>Price $200</p>
-          </div>
-        </div>
-        <div className="space corner free-parking">Free Parking</div>
-        {/* <!-- Bottom Row (reversed) --> */}
-        <div className="space property">
-          <div className="property-name">
-            <p>North Brigade Germany</p>
-            <p>Price $220</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Chance</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Skatehalle Germany</p>
-            <p>Price $220</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Hirshgarten Skatepark Germany</p>
-            <p>Price $200</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Girl Skateboards</p>
-            <p>Price $200</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Nike Tempo Mexico</p>
-            <p>Price $250</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>La Duna Mexico</p>
-            <p>Price $250</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Tampa Skateshop</p>
-            <p>Price $120</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>La Mexicana Mexico</p>
-            <p>Price $280</p>
-          </div>
-        </div>
-        <div className="space corner go-to-jail">Go to Jail</div>
-        {/* <!-- Left Column (reversed) --> */}
-        <div className="space property">
-          <div className="property-name">
-            <p>USU Skatepark Africa</p>
-            <p>Price $300</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Shangalla Skatepark Africa</p>
-            <p>Price $300</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Skatepark Trivia</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Kgali Skatepark Africa</p>
-            <p>Price $320</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Zero Skateboards</p>
-            <p>Price $200</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Chance</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Street Leauge</p>
-            <p>Price $350</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>Skate Shoes</p>
-            <p>Price $75</p>
-          </div>
-        </div>
-        <div className="space property">
-          <div className="property-name">
-            <p>x-Games</p>
-            <p>Price $400</p>
-          </div>
-        </div>
-        {/* Game Piece */}
-        <h2 className="player-turn">Your turn player{currentPlayer}</h2>
-        {/* Game Pieces */}
-        <div
-          id="playerOne"
-          className={`game-piece position-${playerOneCurrentPosition}`}
-        >
-          🏃‍♂️
-        </div>
-        <div
-          id="playerTwo"
-          className={`game-piece-2 position-${playerTwoCurrentPosition}`}
-        >
-          🏃‍♂️
         </div>
 
-        {/* Player Buttons to Move */}
-        {currentPlayer === 1 ? (
-          <div className="player-one-action">
-            <button onClick={movePiece}>Move</button>
+        {players.map((p, i) => (
+          <div
+            key={i}
+            className={`piece p${i} position-${p.space}`}
+            role="img"
+            aria-label={`${PLAYER_NAMES[i]} piece on ${boardSpaces[p.space].name}`}
+          >
+            {i + 1}
           </div>
-        ) : (
-          <div className="player-two-action">
-            <button onClick={movePiece}>Move</button>
-          </div>
-        )}
-
-        {/*player one cards*/}
-        <div className="playerOne-status">
-          <h2>Player One Status</h2>
-          <p>{BoardSpaces[playerOneCurrentPosition].name}</p>
-          <p>{playerOneHand.money}</p>
-          <p>{playerOneHand.properties}</p>
-        </div>
-        {/*player two cards*/}
-        <div className="playerTwo-status">
-          <h2>Player Two Status</h2>
-          <p>{BoardSpaces[playerTwoCurrentPosition].name}</p>
-          <p>{playerTwoHand.money}</p>
-          <p>{playerTwoHand.properties}</p>
-        </div>
+        ))}
       </div>
     </div>
   );

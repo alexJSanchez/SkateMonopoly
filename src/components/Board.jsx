@@ -70,6 +70,8 @@ const FADE_MS = 350; // the card fades out when Next is pressed
 const PAN_MS = 800; // camera glide to the next player, before their bubble appears
 const MAX_WALK = 12; // longer jumps (e.g. Go to Jail) teleport instead of walking
 const FOLLOW_ZOOM = 1.35;
+const FOLLOW_BIAS = 0.45; // how far the camera leans from the piece towards the board's middle
+const PAN_LIMIT = { min: -0.6, max: 1.6 }; // board fractions; 0..1 is the board itself
 // While a piece is travelling the camera pulls back by this factor, so you can
 // see the board it is crossing as well as the piece itself, then zooms back in.
 const TRAVEL_ZOOM_FACTOR = 0.62;
@@ -371,7 +373,13 @@ export default function Board() {
   // The camera follows whoever is rolling/moving, otherwise whoever's turn it is.
   const focus = holding ? roller : movingIdx >= 0 ? movingIdx : uiTurn;
   const focusPoint = cellCenter(shown[focus]);
-  const camera = autoFollow ? focusPoint : pan;
+  // The camera looks a little towards the middle of the board, not dead on the
+  // piece, so that more of the board is in view around the character.
+  const followPoint = {
+    x: focusPoint.x + (0.5 - focusPoint.x) * FOLLOW_BIAS,
+    y: focusPoint.y + (0.5 - focusPoint.y) * FOLLOW_BIAS,
+  };
+  const camera = autoFollow ? followPoint : pan;
   // Follow the piece, but pull back while it's travelling so the board it crosses stays in view.
   const viewZoom = autoFollow && movingIdx >= 0 ? zoom * TRAVEL_ZOOM_FACTOR : zoom;
 
@@ -400,7 +408,7 @@ export default function Board() {
     dragRef.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
     if (autoFollow) {
-      setPan(focusPoint);
+      setPan(followPoint);
       setAutoFollow(false);
     }
     setDragging(true);
@@ -418,8 +426,9 @@ export default function Board() {
     const b = (v - u) * SIN_45;
     const size = boardRef.current.offsetWidth;
     setPan((p) => ({
-      x: Math.min(1, Math.max(0, p.x - a / size)),
-      y: Math.min(1, Math.max(0, p.y - b / size)),
+      // you can pan well past the board's edges before hitting the limit
+      x: Math.min(PAN_LIMIT.max, Math.max(PAN_LIMIT.min, p.x - a / size)),
+      y: Math.min(PAN_LIMIT.max, Math.max(PAN_LIMIT.min, p.y - b / size)),
     }));
   };
   const endDrag = () => {
@@ -430,19 +439,14 @@ export default function Board() {
   // Every frame, each stack is placed above its player's head on screen, then
   // clamped so all of it stays inside the window whatever the camera zoom is.
   const [hudEl, setHudEl] = useState(null);
-  const zoomerRef = useRef(null);
+  // Collapse the card / bubble down to a small tab so the board underneath can be read.
+  const [panelsHidden, setPanelsHidden] = useState(false);
   useEffect(() => {
     if (!hudEl) return undefined;
     const MARGIN = 8;
     const GAP = 10; // between the head and the stack
     let frame;
     const tick = () => {
-      // While anything is showing above a head, ease the board down a little so
-      // the stack has room above the character instead of being squashed over it.
-      zoomerRef.current?.style.setProperty(
-        "--shift-y",
-        hudEl.children.length > 0 ? "20vh" : "0px"
-      );
       const layer = hudEl.getBoundingClientRect();
       for (const stack of hudEl.children) {
         const anchor = boardRef.current?.querySelector(
@@ -455,16 +459,29 @@ export default function Board() {
         const w = stack.offsetWidth;
         const h = stack.offsetHeight;
         const headX = ground.left - layer.left;
-        const wantTop = ground.top - layer.top - bodyHeight - GAP - h;
+        const feetY = ground.top - layer.top;
         const left = Math.min(Math.max(headX - w / 2, MARGIN), layer.width - w - MARGIN);
-        const top = Math.min(Math.max(wantTop, MARGIN), layer.height - h - MARGIN);
+        // Above the head if it fits there, otherwise below the feet, otherwise
+        // wherever there is more room (kept inside the window either way).
+        const roomAbove = feetY - bodyHeight - GAP - MARGIN;
+        const roomBelow = layer.height - feetY - GAP - MARGIN;
+        let top;
+        let flipped = false;
+        if (roomAbove >= h) {
+          top = feetY - bodyHeight - GAP - h;
+        } else if (roomBelow >= h) {
+          top = feetY + GAP;
+          flipped = true;
+        } else if (roomAbove >= roomBelow) {
+          top = Math.max(MARGIN, feetY - bodyHeight - GAP - h);
+        } else {
+          top = Math.min(layer.height - h - MARGIN, feetY + GAP);
+          flipped = true;
+        }
         stack.style.left = `${left}px`;
         stack.style.top = `${top}px`;
-        // once it has been pushed off its head, the bubble's tail would point the wrong way
-        stack.classList.toggle(
-          "clamped",
-          Math.abs(left + w / 2 - headX) > 4 || Math.abs(top - wantTop) > 4
-        );
+        // off its head (flipped or slid sideways): the bubble's tail would point the wrong way
+        stack.classList.toggle("clamped", flipped || Math.abs(left + w / 2 - headX) > 4);
       }
       frame = requestAnimationFrame(tick);
     };
@@ -588,7 +605,7 @@ export default function Board() {
         </button>
 
         {/* The first 40 children must be the spaces: App.css positions them with nth-child */}
-        <div className="iso-zoomer" ref={zoomerRef} style={{ "--zoom": viewZoom }}>
+        <div className="iso-zoomer" style={{ "--zoom": viewZoom }}>
         <div
           ref={boardRef}
           className={`board iso-board${walkingIdx >= 0 ? " walking" : ""}`}
@@ -836,7 +853,12 @@ export default function Board() {
                     {(showDice || rivalDice || bubble || showCard || showNext) &&
                       hudEl &&
                       createPortal(
-                      <div className="head-stack hud-stack" data-player={i}>
+                      <div
+                        className={`head-stack hud-stack${
+                          panelsHidden && (showCard || bubble || showNext) ? " collapsed" : ""
+                        }`}
+                        data-player={i}
+                      >
                         {showDice && (
                           <div className="head-dice" aria-hidden="true">
                             <Die value={dice[0]} rollKey={`a${game.rollCount}`} />
@@ -849,21 +871,36 @@ export default function Board() {
                             <Die value={rivalDice[1]} rollKey={`rb${game.rollCount}`} />
                           </div>
                         )}
-                        {showCard && (
-                          <LocationCard
-                            key={`${game.rollCount}-${p.space}`}
-                            game={game}
-                            index={p.space}
-                            leaving={leaving && i === uiTurn}
-                          />
+                        {(showCard || bubble || showNext) && (
+                          <button
+                            className="stack-toggle"
+                            onClick={() => setPanelsHidden((h) => !h)}
+                            aria-expanded={!panelsHidden}
+                            aria-label={panelsHidden ? "Show the card" : "Hide the card"}
+                            title={panelsHidden ? "Show" : "Hide"}
+                          >
+                            <span className={`eye${panelsHidden ? " closed" : ""}`}>👁️</span>
+                          </button>
                         )}
-                        {bubble}
-                        {showNext && (
-                          <div className="speech-bubble">
-                            <button className="roll-button" onClick={nextPlayer}>
-                              Next player ▶
-                            </button>
-                          </div>
+                        {!panelsHidden && (
+                          <>
+                            {showCard && (
+                              <LocationCard
+                                key={`${game.rollCount}-${p.space}`}
+                                game={game}
+                                index={p.space}
+                                leaving={leaving && i === uiTurn}
+                              />
+                            )}
+                            {bubble}
+                            {showNext && (
+                              <div className="speech-bubble">
+                                <button className="roll-button" onClick={nextPlayer}>
+                                  Next player ▶
+                                </button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>,
                       hudEl

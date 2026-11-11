@@ -1421,3 +1421,52 @@ body {
   max-height: 11em;
   overflow-y: auto;
 }
+
+/* the 3D viewport is the entire page; the player info just floats over it */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.game .iso-viewport {
+  position: absolute;
+  inset: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding-left: 0;
+  border-radius: 0;
+  -webkit-mask-image: none;
+  mask-image: none;
+  background: radial-gradient(ellipse at 50% 25%, #cfeeff 0%, #86bde8 55%, #4b7fb5 100%);
+}
+
+/* ---------- camera: zoom lives on a wrapper so it can ease while the board glides ---------- */
+.iso-zoomer {
+  flex: none;
+  width: max-content;
+  transform: scale(var(--zoom));
+  transition: transform 0.9s ease-in-out;
+}
+.game.dragging .iso-zoomer { transition: none; }
+/* the board itself no longer scales; it only tilts and slides under the camera */
+.iso-board.board {
+  transform: rotateX(55deg) rotateZ(45deg) translate(var(--tx), var(--ty));
+}
+
+/* raise the board 20% of the screen height (it sat below the horizon);
+   there is still room above the piece for its card and bubble */
+.game .iso-viewport {
+  padding-top: 0;
+  padding-bottom: 10vh;
+  box-sizing: border-box;
+}
+
+/* tighter card + bubble so they fit above the piece now the board sits higher */
+.loc-card { width: 12em; font-size: calc(var(--board-size) / 68); }
+.loc-img { height: 4em; }
+.loc-info { padding: 0.35em 0.55em 0.5em; line-height: 1.2; }
+.head-stack { gap: 8px; }
+.speech-bubble { font-size: calc(var(--board-size) / 66); padding: 8px 10px; gap: 5px; }
+.speech-bubble button { padding: 0.45em 1em; }

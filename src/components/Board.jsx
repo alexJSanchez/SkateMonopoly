@@ -69,6 +69,9 @@ const FADE_MS = 350; // the card fades out when Next is pressed
 const PAN_MS = 800; // camera glide to the next player, before their bubble appears
 const MAX_WALK = 12; // longer jumps (e.g. Go to Jail) teleport instead of walking
 const FOLLOW_ZOOM = 1.35;
+// While a piece is travelling the camera pulls back by this factor, so you can
+// see the board it is crossing as well as the piece itself, then zooms back in.
+const TRAVEL_ZOOM_FACTOR = 0.62;
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 3;
 const COS_TILT = Math.cos((55 * Math.PI) / 180); // matches rotateX(55deg) in App.css
@@ -368,6 +371,8 @@ export default function Board() {
   const focus = holding ? roller : movingIdx >= 0 ? movingIdx : uiTurn;
   const focusPoint = cellCenter(shown[focus]);
   const camera = autoFollow ? focusPoint : pan;
+  // Follow the piece, but pull back while it's travelling so the board it crosses stays in view.
+  const viewZoom = autoFollow && movingIdx >= 0 ? zoom * TRAVEL_ZOOM_FACTOR : zoom;
 
   const act = (action) => {
     setAutoFollow(true); // new action: look at the result
@@ -406,8 +411,8 @@ export default function Board() {
     const dy = e.clientY - last.y;
     dragRef.current = { x: e.clientX, y: e.clientY };
     // Undo the isometric projection: screen pixels -> board-plane pixels.
-    const u = dx / zoom;
-    const v = dy / (zoom * COS_TILT);
+    const u = dx / viewZoom;
+    const v = dy / (viewZoom * COS_TILT);
     const a = (u + v) * SIN_45;
     const b = (v - u) * SIN_45;
     const size = boardRef.current.offsetWidth;
@@ -420,11 +425,56 @@ export default function Board() {
     dragRef.current = null;
     setDragging(false);
   };
-  const onWheel = (e) => {
-    setZoom((z) =>
-      Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * Math.exp(-e.deltaY * 0.0015)))
-    );
-  };
+  // Scroll / trackpad pinch zooms the camera only. The listener is native and
+  // non-passive so it can stop the browser from also zooming the whole page.
+  const gameRef = useRef(null);
+  useEffect(() => {
+    const el = gameRef.current;
+    const onWheel = (e) => {
+      if (e.target.closest(".skate-list")) return; // let that list scroll
+      e.preventDefault();
+      const rate = e.ctrlKey ? 0.01 : 0.0015; // pinch gestures send small deltas
+      setZoom((z) =>
+        Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * Math.exp(-e.deltaY * rate)))
+      );
+    };
+    const stop = (e) => e.preventDefault(); // Safari's pinch gesture
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("gesturestart", stop);
+    el.addEventListener("gesturechange", stop);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("gesturestart", stop);
+      el.removeEventListener("gesturechange", stop);
+    };
+  }, []);
+
+  // If the page itself is zoomed (browser zoom, or a pinch the browser handles),
+  // keep the player info the same size on screen and pinned to the visible
+  // top-left corner by counter-scaling it.
+  const [infoView, setInfoView] = useState({ scale: 1, x: 0, y: 0 });
+  useEffect(() => {
+    const baseDpr = window.devicePixelRatio || 1;
+    const vv = window.visualViewport;
+    const update = () => {
+      const pinch = vv ? vv.scale : 1;
+      const pageZoom = (window.devicePixelRatio || 1) / baseDpr;
+      setInfoView({
+        scale: 1 / (pinch * pageZoom),
+        x: vv ? vv.offsetLeft : 0,
+        y: vv ? vv.offsetTop : 0,
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    vv?.addEventListener("resize", update);
+    vv?.addEventListener("scroll", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      vv?.removeEventListener("resize", update);
+      vv?.removeEventListener("scroll", update);
+    };
+  }, []);
 
 
   return (
@@ -434,9 +484,15 @@ export default function Board() {
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      onWheel={onWheel}
+      ref={gameRef}
     >
-      <aside className="sidebar">
+      <aside
+        className="sidebar"
+        style={{
+          transform: `translate(${infoView.x}px, ${infoView.y}px) scale(${infoView.scale})`,
+          transformOrigin: "0 0",
+        }}
+      >
         <div className="status-cards">
           {players.map((p, i) => (
             <div
@@ -485,11 +541,11 @@ export default function Board() {
         </button>
 
         {/* The first 40 children must be the spaces: App.css positions them with nth-child */}
+        <div className="iso-zoomer" style={{ "--zoom": viewZoom }}>
         <div
           ref={boardRef}
           className={`board iso-board${walkingIdx >= 0 ? " walking" : ""}`}
           style={{
-            "--zoom": zoom,
             "--tx": `${(0.5 - camera.x) * 100}%`,
             "--ty": `${(0.5 - camera.y) * 100}%`,
           }}
@@ -763,6 +819,7 @@ export default function Board() {
               </div>
             );
           })}
+        </div>
         </div>
       </div>
     </div>

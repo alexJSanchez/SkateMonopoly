@@ -33,7 +33,8 @@ Collect **$200** each time you pass or land on SK8. You do not collect it if you
 | --- | --- |
 | **Spot** (no filmer yet) | You may **hire a filmer** for the spot's price, or skip. If you can't afford it, nothing happens. |
 | **Spot** (the other player's filmer is there) | Pay them a **clip fee**. |
-| **Spot** (your own filmer is there) | Nothing happens. |
+| **Spot** (your own camera is there) | You may **film a second trick** to upgrade the camera to a film tape (see [Upgrading](#upgrading-camera-to-film-tape)), or skip. |
+| **Spot** (your own film tape is there) | Nothing happens. |
 | **New Setup** (tax) | Pay the bank the **lower** of 10% of your money or $200. |
 | **Chance** | Draw the top Chance card, then play it (see [Chance cards](#chance-cards)). |
 | **Skate Trivia** | Card space. Trivia cards are not implemented yet, so nothing happens. |
@@ -41,11 +42,18 @@ Collect **$200** each time you pass or land on SK8. You do not collect it if you
 | **Free Parking** | Nothing happens. |
 | **Go to Jail** | You are sent to Jail. |
 
-A spot with a filmer shows a camcorder in the owner's colour.
+A spot with a filmer shows a 3D piece in the owner's colour: a camcorder, or a film tape once upgraded. The space also shows the current clip fee (📹 camera, 📼 tape).
 
 ### Clip fee
 
-The clip fee is **10% of the filmer's price**, rounded to the nearest dollar. For example, Burnside ($50) charges $5 and X-Games ($400) charges $40.
+- A **camera** (the first level, like one house) charges **10% of the spot's price**, rounded to the nearest dollar. For example, a $50 spot charges $5 and X-Games ($400) charges $40.
+- A **film tape** (the upgrade, like a hotel) charges **5x** the camera clip fee. For example, that $50 spot charges $25 and X-Games charges $200.
+
+### Upgrading: camera to film tape
+
+When you land on a spot where you already own the camera, you may **film a second trick** there. It costs **50% of the spot's price** and turns the camera into a film tape, which raises the clip fee. Each spot has one camera and, after the upgrade, one tape (no more levels). If you can't afford it, or you skip, the camera stays. Landing on your own tape does nothing.
+
+If a player goes bankrupt, their spots go back to the bank and any tapes are lost with them.
 
 ## Chance cards
 
@@ -54,13 +62,13 @@ The 16 Chance cards are shuffled at the start of the game. When you land on a Ch
 How the card types work:
 
 - **Move to a space** (X-Games, SK8, Hirshgarten Skatepark Germany, Gulliver SkatePark Spain, Element Skateboards): you always travel *forward*. If that takes you past SK8 (or onto it), collect $200. X-Games is the exception in practice, since it's ahead of every Chance space. Then you resolve the space you land on, so you can hire a filmer there or pay a clip fee.
-- **Nearest skateboard brand** (Element, Plan B, Girl or Zero): move forward to the closest one. If nobody has a filmer there you may hire one. If the other player does, you pay **double** the clip fee.
+- **Nearest skateboard brand** (Element, Plan B, Girl or Zero): move forward to the closest one. If nobody has a filmer there you may hire one. If the other player does, you pay **double** the clip fee (camera or tape).
 - **Nearest shop** (Supreme or Tampa Skateshop): move forward to the closest one. If nobody has a filmer there you may hire one. If the other player does, you roll the dice and pay them **10x the total**.
 - **Go back 3 spaces:** move backwards 3 and resolve that space. You never collect SK8 salary for going backwards.
 - **Go directly to Jail:** no salary, and your turn ends.
 - **Get Out of Jail Free:** you keep this card (it leaves the deck while you hold it). While you're in jail you can use it to leave for free, without the $50 fee or rolling doubles. Once used, it goes back into the deck.
 - **Money cards:** Bank dividend (+$50), Building loan matures (+$150), Speeding fine (-$15).
-- **You lost footage:** pay $25 to reupload every tape, for each spot you own. Owning no spots costs nothing.
+- **You lost footage:** pay to reupload every tape: **$25 for each camera** (like a house) and **$100 for each film tape** (like a hotel) that you own. Owning no spots costs nothing.
 - **Chairman of the Board:** pay $50 to each other player.
 
 If you roll doubles onto a Chance space you still roll again after playing the card, unless the card sent you to jail.

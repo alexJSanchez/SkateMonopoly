@@ -9,6 +9,8 @@ import {
   gameReducer,
   ownerOf,
   rentFor,
+  rentAt,
+  upgradeCostFor,
 } from "../game/rules.js";
 import { cellCenter, cellTopEdge } from "../game/layout.js";
 
@@ -156,6 +158,14 @@ function Camcorder3D() {
       {range(4).map((k) => (
         <Disc key={`h${k}`} x={k * 0.55} yc={3.5} zc={4.5} r={3.7} color="#101112" />
       ))}
+      {/* the front glass of the lens (faces the viewer once the model is turned) */}
+      <Disc
+        x={-0.15}
+        yc={3.5}
+        zc={4.5}
+        r={3.1}
+        color="radial-gradient(circle at 38% 38%, #86abea, #1b2c4d 55%, #05070d)"
+      />
       {/* handle with posts, and the mic on top */}
       <Box x={4.5} y={2.8} z={8} w={1.4} d={1.4} h={0.9} color={grey} />
       <Box x={13} y={2.8} z={8} w={1.4} d={1.4} h={0.9} color={grey} />
@@ -164,6 +174,36 @@ function Camcorder3D() {
       {/* viewfinder and eyecup at the back */}
       <Box x={16.5} y={0.5} z={5.4} w={5.5} d={3} h={2.8} color="#1f2122" top="#33363a" />
       <Box x={21.8} y={0.2} z={5.1} w={1.2} d={3.6} h={3.4} color="#111" />
+    </div>
+  );
+}
+
+// The upgraded piece: a film tape (a cassette standing on its base plate),
+// with the owner's colour on the label and the plate.
+function Tape3D() {
+  return (
+    <div className="cam3d-model">
+      <Box x={-0.5} y={-1.2} z={0} w={15} d={6.4} h={1} color="var(--owner)" />
+      <Box
+        x={1}
+        y={0.5}
+        z={1}
+        w={12.5}
+        d={3.6}
+        h={9}
+        color="#1d1f21"
+        top="#3a3d41"
+        south={
+          <>
+            <span className="tape-label" />
+            <span className="tape-window">
+              <span className="tape-reel" />
+              <span className="tape-reel" />
+            </span>
+            <span className="tape-foot" />
+          </>
+        }
+      />
     </div>
   );
 }
@@ -321,7 +361,9 @@ export default function Board() {
                     {p.properties.length > 0 && (
                       <ul>
                         {p.properties.map((s) => (
-                          <li key={s}>{boardSpaces[s].name}</li>
+                          <li key={s}>
+                            {game.tapes.includes(s) ? "📼" : "📹"} {boardSpaces[s].name}
+                          </li>
                         ))}
                       </ul>
                     )}
@@ -367,7 +409,9 @@ export default function Board() {
                   )}
                   <p>{space.name}</p>
                   {owner >= 0 ? (
-                    <p>Filmer: {PLAYER_NAMES[owner]}</p>
+                    <p>
+                      {game.tapes.includes(i) ? "📼" : "📹"} ${rentAt(game, i)}
+                    </p>
                   ) : (
                     spaceDetail(space) && <p>{spaceDetail(space)}</p>
                   )}
@@ -396,15 +440,16 @@ export default function Board() {
             const owner = ownerOf(game, i);
             if (owner < 0) return null;
             const { x, y } = cellTopEdge(i);
+            const isTape = game.tapes.includes(i);
             return (
               <div
                 key={`cam-${i}`}
-                className={`cam3d p${owner}`}
+                className={`cam3d p${owner} ${isTape ? "is-tape" : "is-camera"}`}
                 style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
                 role="img"
-                aria-label={`${space.name}: filmer hired by ${PLAYER_NAMES[owner]}`}
+                aria-label={`${space.name}: ${isTape ? "film tape" : "camera"} owned by ${PLAYER_NAMES[owner]}`}
               >
-                <Camcorder3D />
+                {isTape ? <Tape3D key="tape" /> : <Camcorder3D key="camera" />}
               </div>
             );
           })}
@@ -466,6 +511,25 @@ export default function Board() {
                       onClick={() => act({ type: "BUY" })}
                     >
                       Hire filmer 📹
+                    </button>
+                    <button
+                      className="secondary-button"
+                      onClick={() => act({ type: "SKIP" })}
+                    >
+                      Skip
+                    </button>
+                  </>
+                )}
+                {phase === "upgrade" && (
+                  <>
+                    <p className="bubble-text">
+                      Film a 2nd trick here? Camera → Tape
+                    </p>
+                    <button
+                      className="roll-button"
+                      onClick={() => act({ type: "UPGRADE" })}
+                    >
+                      Film it 📼 (${upgradeCostFor(currentSpace)})
                     </button>
                     <button
                       className="secondary-button"

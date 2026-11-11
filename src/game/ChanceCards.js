@@ -113,12 +113,13 @@ const chanceCards = {
       action: "go_to_jail",
     },
     {
-      text: "You lost footage! Pay to reupload every tape: $25 for each spot you own.",
+      text: "You lost footage! Pay to reupload every tape: $25 for each camera, $100 for each film tape.",
       description:
-        "The player pays the bank $25 for every spot they own (every spot with their filmer). Owning no spots costs nothing.",
+        "The player pays the bank $25 for every camera they own (like a house) and $100 for every film tape (like a hotel). Owning no spots costs nothing.",
       type: "financial_penalty",
       action: "pay_per_property",
-      cost_per_property: 25,
+      cost_per_camera: 25,
+      cost_per_tape: 100,
     },
     {
       text: "Speeding fine $15.",

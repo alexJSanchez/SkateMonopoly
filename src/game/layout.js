@@ -28,5 +28,5 @@ export function cellCenter(index) {
 export function cellTopEdge(index) {
   const { col, row } = cellTrack(index);
   const rowSize = row === 0 || row === 10 ? CORNER : 1;
-  return { x: trackCenter(col), y: trackCenter(row) - rowSize / 2 / TOTAL + 0.012 };
+  return { x: trackCenter(col), y: trackCenter(row) - rowSize / 2 / TOTAL + 0.03 };
 }

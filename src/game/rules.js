@@ -13,7 +13,19 @@ export const MAX_DOUBLES = 3; // third double in a row sends you to jail
 export const RENT_RATE = 0.1; // rent = 10% of the property's price
 export const TAX_RATE = 0.1; // "Pay 10% or $X": the lower amount is charged
 
+// Every hired filmer starts as a CAMERA (like one house). Landing on your own
+// spot again lets you film a second trick, which turns the camera into a film
+// TAPE (like a hotel): a much bigger clip fee. One camera / one tape per spot.
+export const TAPE_RENT_MULTIPLIER = 5; // tape clip fee = camera clip fee x 5
+export const UPGRADE_COST_RATE = 0.5; // second trick costs 50% of the spot's price
+
 export const rentFor = (space) => Math.round(space.price * RENT_RATE);
+export const upgradeCostFor = (space) =>
+  Math.round(space.price * UPGRADE_COST_RATE);
+// Clip fee for a spot right now: camera level, or tape level if upgraded.
+export const rentAt = (state, index) =>
+  rentFor(boardSpaces[index]) *
+  (state.tapes.includes(index) ? TAPE_RENT_MULTIPLIER : 1);
 
 const SPACE_COUNT = boardSpaces.length;
 const JAIL_CARD_INDEX = chanceCards.cards.findIndex(
@@ -53,6 +65,7 @@ export function createGame(order) {
     pendingDouble: false, // did the roll that led to "buy" / "card" come up doubles?
     deck: order ?? shuffle(chanceCards.cards.map((_, i) => i)), // draw from the front
     card: null, // index of the Chance card waiting to be played
+    tapes: [], // spaces upgraded from a camera to a film tape
     winner: null,
     message: "Hit Skate to start the game!",
   };
@@ -80,6 +93,8 @@ function bankrupt(state, i) {
     properties: [],
     jailCards: 0,
   });
+  // their spots go back to the bank, tapes and all
+  s = { ...s, tapes: s.tapes.filter((idx) => !state.players[i].properties.includes(idx)) };
   s = say(s, `${PLAYER_NAMES[i]} is bankrupt!`);
   const alive = s.players
     .map((p, idx) => (p.bankrupt ? -1 : idx))
@@ -169,7 +184,18 @@ function landOn(state, from, to, rolledDouble, opts = {}) {
         }
         s = say(s, `Can't afford a filmer ($${space.price}).`);
       } else if (owner === i) {
-        s = say(s, "Your filmer is already here.");
+        if (s.tapes.includes(to)) {
+          s = say(s, "Your film tape is already here.");
+        } else {
+          const cost = upgradeCostFor(space);
+          if (s.players[i].money >= cost) {
+            return say(
+              { ...s, phase: "upgrade", pendingDouble: rolledDouble },
+              `Your camera is here. Film a second trick for $${cost} to turn it into a tape?`
+            );
+          }
+          s = say(s, `Your camera is here. A second trick costs $${cost}, which you can't afford.`);
+        }
       } else {
         let rent;
         if (opts.diceTimes) {
@@ -177,7 +203,7 @@ function landOn(state, from, to, rolledDouble, opts = {}) {
           rent = total * opts.diceTimes;
           s = say(s, `Rolled ${total}: paid $${rent} to ${PLAYER_NAMES[owner]}'s filmer.`);
         } else {
-          rent = rentFor(space) * (opts.rentMultiplier ?? 1);
+          rent = rentAt(s, to) * (opts.rentMultiplier ?? 1);
           const label = opts.rentMultiplier > 1 ? "double clip fee" : "clip fee";
           s = say(s, `Paid $${rent} ${label} to ${PLAYER_NAMES[owner]}'s filmer.`);
         }
@@ -254,13 +280,16 @@ function playChanceCard(state, dice) {
       s = say(s, `${name} paid $${card.amount} to the bank.`);
       return endTurn(pay(s, i, null, card.amount), double);
     case "pay_per_property": {
-      const count = s.players[i].properties.length;
-      const cost = count * card.cost_per_property;
+      // every camera is "one house" ($25), every tape is "one hotel" ($100)
+      const owned = s.players[i].properties;
+      const tapes = owned.filter((idx) => s.tapes.includes(idx)).length;
+      const cameras = owned.length - tapes;
+      const cost = cameras * card.cost_per_camera + tapes * card.cost_per_tape;
       s = say(
         s,
-        count === 0
+        owned.length === 0
           ? `${name} has no spots, so there's nothing to reupload.`
-          : `${name} paid $${cost} to reupload ${count} spot${count > 1 ? "s" : ""}.`
+          : `${name} paid $${cost} to reupload ${cameras} camera${cameras === 1 ? "" : "s"} and ${tapes} tape${tapes === 1 ? "" : "s"}.`
       );
       return endTurn(pay(s, i, null, cost), double);
     }
@@ -282,7 +311,7 @@ function playChanceCard(state, dice) {
 }
 
 // ---------- reducer ----------
-// Actions: { type: "ROLL", dice: [a, b] } | "BUY" | "SKIP" | "PAY_JAIL" |
+// Actions: { type: "ROLL", dice: [a, b] } | "BUY" | "UPGRADE" | "SKIP" | "PAY_JAIL" |
 //          "USE_JAIL_CARD" | { type: "CARD_OK", dice: [a, b] } | "RESET"
 
 export function gameReducer(state, action) {
@@ -343,10 +372,29 @@ export function gameReducer(state, action) {
       return endTurn(s, state.pendingDouble);
     }
 
-    case "SKIP": {
-      if (state.phase !== "buy") return state;
-      const s = { ...state, message: `${name} didn't hire a filmer at ${boardSpaces[state.players[i].space].name}.` };
+    case "UPGRADE": {
+      if (state.phase !== "upgrade") return state;
+      const index = state.players[i].space;
+      const space = boardSpaces[index];
+      const cost = upgradeCostFor(space);
+      if (state.players[i].money < cost) return state;
+      let s = patchPlayer(state, i, { money: state.players[i].money - cost });
+      s = {
+        ...s,
+        tapes: [...s.tapes, index],
+        message: `${name} filmed a second trick at ${space.name} for $${cost}: the camera is now a film tape! Clip fee is now $${rentAt({ ...s, tapes: [...s.tapes, index] }, index)}.`,
+      };
       return endTurn(s, state.pendingDouble);
+    }
+
+    case "SKIP": {
+      if (state.phase !== "buy" && state.phase !== "upgrade") return state;
+      const where = boardSpaces[state.players[i].space].name;
+      const text =
+        state.phase === "buy"
+          ? `${name} didn't hire a filmer at ${where}.`
+          : `${name} didn't film a second trick at ${where}.`;
+      return endTurn({ ...state, message: text }, state.pendingDouble);
     }
 
     case "CARD_OK":

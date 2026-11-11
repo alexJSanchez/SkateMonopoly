@@ -419,7 +419,7 @@ export function gameReducer(state, action) {
         rollCount: state.rollCount + 1,
         roller: i,
         rival: null,
-        message: `${name} rolled ${a} + ${b}.`,
+        message: `${name} rolled ${total}.`,
       };
 
       if (s.players[i].inJail) {

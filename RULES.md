@@ -37,7 +37,7 @@ Collect **$200** each time you pass or land on SK8. You do not collect it if you
 | **Spot** (your own film tape is there) | Nothing happens. |
 | **New Setup** (tax) | Pay the bank the **lower** of 10% of your money or $200. |
 | **Chance** | Draw the top Chance card, then play it (see [Chance cards](#chance-cards)). |
-| **Skate Trivia** | Card space. Trivia cards are not implemented yet, so nothing happens. |
+| **Skate Trivia** | Play a **Game of SKATE** against the other player for one of their camera spots (see [Game of SKATE](#game-of-skate)). |
 | **Jail** (just visiting) | Nothing happens. |
 | **Free Parking** | Nothing happens. |
 | **Go to Jail** | You are sent to Jail. |
@@ -54,6 +54,17 @@ A spot with a filmer shows a 3D piece in the owner's colour: a camcorder, or a f
 When you land on a spot where you already own the camera, you may **film a second trick** there. It costs **50% of the spot's price** and turns the camera into a film tape, which raises the clip fee. Each spot has one camera and, after the upgrade, one tape (no more levels). If you can't afford it, or you skip, the camera stays. Landing on your own tape does nothing.
 
 If a player goes bankrupt, their spots go back to the bank and any tapes are lost with them.
+
+## Game of SKATE
+
+Landing on a **Skate Trivia** space starts a Game of SKATE. It's the only way to steal a spot.
+
+1. **Pick a target.** You choose one of the other player's spots that has a **camera**. Spots with a **film tape** are protected and can't be challenged. (If there's only one camera spot, it's picked for you. If they have none, nothing happens and you skate on.)
+2. **Best of 3 throws.** On each throw both players roll two dice. The higher total wins the round. A tie doesn't count, so you throw again. The first player to win **2 rounds** wins the game.
+3. **If you win,** you **steal** the camera: that spot becomes yours, camera and all.
+4. **If you lose,** you pay the other player that spot's **clip fee**. The spot stays theirs.
+
+Paying can bankrupt you, as with any other clip fee. After the game your turn ends as usual (or you roll again if you rolled doubles).
 
 ## Chance cards
 
@@ -91,7 +102,6 @@ If you fail to roll doubles 3 times, you automatically pay $50 on the third atte
 
 ## Not yet implemented
 
-- Skate Trivia cards
 - Selling or trading a held Get Out of Jail Free card
 - Clip-fee bonuses for filming a whole country or brand group
 - Selling or trading filmers

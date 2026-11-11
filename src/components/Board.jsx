@@ -11,6 +11,7 @@ import {
   rentFor,
   rentAt,
   upgradeCostFor,
+  skateTargets,
 } from "../game/rules.js";
 import { cellCenter, cellTopEdge } from "../game/layout.js";
 import { locationImage } from "../game/locationImages.js";
@@ -239,7 +240,7 @@ function locationLines(game, index) {
     case "tax":
       return [`Pay 10% or $${space.tax}`, "(the lower amount)"];
     case "trivia":
-      return ["Skate Trivia", "Pick up a card"];
+      return ["Game of SKATE", "Win a rival's camera spot"];
     case "chance":
       return ["Chance", "Draw a card"];
     default:
@@ -283,7 +284,7 @@ function spaceDetail(space) {
     case "property":
       return `Filmer $${space.price} · Clip fee $${rentFor(space)}`;
     case "trivia":
-      return "Pick Up Card";
+      return "Game of SKATE";
     case "tax":
       return `Pay 10% or $${space.tax}`;
     default:
@@ -374,7 +375,7 @@ export default function Board() {
       setUiTurn(0);
       setBubbleFor(0);
     }
-    if (action.type === "ROLL") {
+    if (action.type === "ROLL" || action.type === "SKATE_THROW") {
       setHolding(true);
       clearTimeout(holdTimer.current);
       holdTimer.current = setTimeout(() => setHolding(false), DICE_MS);
@@ -571,6 +572,9 @@ export default function Board() {
                   bubbleFor === turn));
             // The dice hover above the head of whoever rolled, until they land.
             const showDice = busy && i === roller && dice;
+            // In a Game of SKATE the opponent's dice tumble over their own head.
+            const rivalDice =
+              busy && game.rival && game.rival.player === i ? game.rival.dice : null;
             // Once they've landed, whoever just moved shows a card for their space.
             // Once their moves are done, the player who just went gets a Next button.
             const showNext =
@@ -637,6 +641,47 @@ export default function Board() {
                     </button>
                   </>
                 )}
+                {phase === "skate_pick" && (
+                  <>
+                    <p className="bubble-text">Game of SKATE! Pick a camera to win:</p>
+                    <div className="skate-list">
+                      {skateTargets(game, turn).map((idx) => (
+                        <button
+                          key={idx}
+                          className="secondary-button"
+                          onClick={() => act({ type: "SKATE_PICK", space: idx })}
+                        >
+                          📹 {boardSpaces[idx].name} · ${rentAt(game, idx)}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {phase === "skate" && game.skate && (
+                  <>
+                    <p className="bubble-text">
+                      SKATE for {boardSpaces[game.skate.target].name}
+                    </p>
+                    <p className="bubble-text skate-score">
+                      {PLAYER_NAMES[game.skate.challenger]} {game.skate.wins[0]} –{" "}
+                      {game.skate.wins[1]} {PLAYER_NAMES[game.skate.defender]}
+                    </p>
+                    <button
+                      className="roll-button"
+                      onClick={() =>
+                        act({
+                          type: "SKATE_THROW",
+                          dice: [
+                            [rollDie(), rollDie()],
+                            [rollDie(), rollDie()],
+                          ],
+                        })
+                      }
+                    >
+                      Throw down 🎲
+                    </button>
+                  </>
+                )}
                 {phase === "upgrade" && (
                   <>
                     <p className="bubble-text">
@@ -681,12 +726,18 @@ export default function Board() {
                   <div className={`piece-body p${i}`}>
                     <span className="piece-emoji">🛹</span>
                     <span className="piece-num">{i + 1}</span>
-                    {(showDice || bubble || showCard || showNext) && (
+                    {(showDice || rivalDice || bubble || showCard || showNext) && (
                       <div className="head-stack">
                         {showDice && (
                           <div className="head-dice" aria-hidden="true">
                             <Die value={dice[0]} rollKey={`a${game.rollCount}`} />
                             <Die value={dice[1]} rollKey={`b${game.rollCount}`} />
+                          </div>
+                        )}
+                        {rivalDice && (
+                          <div className="head-dice" aria-hidden="true">
+                            <Die value={rivalDice[0]} rollKey={`ra${game.rollCount}`} />
+                            <Die value={rivalDice[1]} rollKey={`rb${game.rollCount}`} />
                           </div>
                         )}
                         {showCard && (

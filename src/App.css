@@ -1411,3 +1411,13 @@ body {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-0.8em); }
 }
+
+/* Game of SKATE: pick list and score in the bubble */
+.speech-bubble .skate-score { font-weight: 800; font-size: 1.05em; }
+.skate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 11em;
+  overflow-y: auto;
+}

@@ -66,6 +66,8 @@ export function createGame(order) {
     deck: order ?? shuffle(chanceCards.cards.map((_, i) => i)), // draw from the front
     card: null, // index of the Chance card waiting to be played
     tapes: [], // spaces upgraded from a camera to a film tape
+    skate: null, // the Game of SKATE in progress: { target, challenger, defender, wins }
+    rival: null, // { player, dice } the opponent's dice for the latest SKATE throw
     winner: null,
     message: "Hit Skate to start the game!",
   };
@@ -155,6 +157,84 @@ function drawChance(state) {
   return say(s, `Chance! "${card.text}"`);
 }
 
+// ---------- Game of SKATE (the Skate Trivia space) ----------
+// The player who landed (the challenger) plays the owner of one of their
+// camera spots, best of 3: each throw both roll two dice, higher total wins the
+// round (ties are thrown again), first to 2 round wins takes the match.
+// Win: the challenger steals the spot. Lose: the challenger pays its clip fee.
+// Spots with a film tape can't be challenged.
+export const SKATE_ROUNDS_TO_WIN = 2;
+
+// Camera-only spots owned by the other players, as space indexes.
+export const skateTargets = (state, challenger) =>
+  state.players.flatMap((p, j) =>
+    j === challenger || p.bankrupt
+      ? []
+      : p.properties.filter((idx) => !state.tapes.includes(idx))
+  );
+
+function startSkate(state, target) {
+  const challenger = state.turn;
+  const defender = ownerOf(state, target);
+  return say(
+    {
+      ...state,
+      phase: "skate",
+      skate: { target, challenger, defender, wins: [0, 0] }, // wins: [challenger, defender]
+    },
+    `${PLAYER_NAMES[challenger]} challenges ${PLAYER_NAMES[defender]} for ${boardSpaces[target].name}. Best of 3, throw!`
+  );
+}
+
+// One throw: dice = [[challengerDie1, challengerDie2], [defenderDie1, defenderDie2]].
+function throwSkate(state, dice) {
+  const { target, challenger, defender } = state.skate;
+  const [mine, theirs] = dice;
+  const a = mine[0] + mine[1];
+  const b = theirs[0] + theirs[1];
+  const cName = PLAYER_NAMES[challenger];
+  const dName = PLAYER_NAMES[defender];
+  let s = {
+    ...state,
+    dice: mine,
+    rival: { player: defender, dice: theirs },
+    rollCount: state.rollCount + 1,
+    roller: challenger,
+    message: `${cName} threw ${a}, ${dName} threw ${b}.`,
+  };
+  if (a === b) return say(s, "A tie! Throw again.");
+
+  const wins = [...s.skate.wins];
+  wins[a > b ? 0 : 1] += 1;
+  s = { ...s, skate: { ...s.skate, wins } };
+  s = say(s, `${a > b ? cName : dName} takes the round (${wins[0]}-${wins[1]}).`);
+  if (wins[0] < SKATE_ROUNDS_TO_WIN && wins[1] < SKATE_ROUNDS_TO_WIN) {
+    return say(s, "Throw again!");
+  }
+
+  const spot = boardSpaces[target].name;
+  s = { ...s, skate: null, phase: "roll" };
+  if (wins[0] > wins[1]) {
+    // challenger steals the camera
+    s = {
+      ...s,
+      players: s.players.map((p, idx) =>
+        idx === defender
+          ? { ...p, properties: p.properties.filter((x) => x !== target) }
+          : idx === challenger
+            ? { ...p, properties: [...p.properties, target] }
+            : p
+      ),
+    };
+    s = say(s, `${cName} wins the game of SKATE and steals the camera at ${spot}!`);
+  } else {
+    const fee = rentAt(s, target);
+    s = say(s, `${dName} wins the game of SKATE! ${cName} pays $${fee} for ${spot}.`);
+    s = pay(s, challenger, defender, fee);
+  }
+  return endTurn(s, state.pendingDouble);
+}
+
 // Move the current player to space `to` and resolve it.
 // opts.backwards: moved backwards, so SK8 salary is never paid.
 // opts.rentMultiplier: multiplies the clip fee if the other player owns it.
@@ -217,9 +297,17 @@ function landOn(state, from, to, rolledDouble, opts = {}) {
       s = pay(s, i, null, amount);
       break;
     }
-    case "trivia":
-      s = say(s, "Draw a Skate Trivia card! (cards coming soon)");
-      break;
+    case "trivia": {
+      // Game of SKATE against the other player for one of their camera spots.
+      const targets = skateTargets(s, i);
+      if (targets.length === 0) {
+        s = say(s, "Game of SKATE! But there are no camera spots to win, so you skate on.");
+        break;
+      }
+      s = { ...s, pendingDouble: rolledDouble };
+      if (targets.length === 1) return startSkate(s, targets[0]);
+      return say({ ...s, phase: "skate_pick" }, "Game of SKATE! Pick a camera spot to win.");
+    }
     case "chance":
       return drawChance({ ...s, pendingDouble: rolledDouble });
     case "corner":
@@ -312,7 +400,8 @@ function playChanceCard(state, dice) {
 
 // ---------- reducer ----------
 // Actions: { type: "ROLL", dice: [a, b] } | "BUY" | "UPGRADE" | "SKIP" | "PAY_JAIL" |
-//          "USE_JAIL_CARD" | { type: "CARD_OK", dice: [a, b] } | "RESET"
+//          "USE_JAIL_CARD" | { type: "CARD_OK", dice: [a, b] } |
+//          { type: "SKATE_PICK", space } | { type: "SKATE_THROW", dice: [[a, b], [c, d]] } | "RESET"
 
 export function gameReducer(state, action) {
   const i = state.turn;
@@ -329,6 +418,7 @@ export function gameReducer(state, action) {
         dice: [a, b],
         rollCount: state.rollCount + 1,
         roller: i,
+        rival: null,
         message: `${name} rolled ${a} + ${b}.`,
       };
 
@@ -371,6 +461,16 @@ export function gameReducer(state, action) {
       s = { ...s, message: `${name} hired a filmer at ${boardSpaces[index].name} for $${price}.` };
       return endTurn(s, state.pendingDouble);
     }
+
+    case "SKATE_PICK": {
+      if (state.phase !== "skate_pick") return state;
+      if (!skateTargets(state, i).includes(action.space)) return state;
+      return startSkate(state, action.space);
+    }
+
+    case "SKATE_THROW":
+      if (state.phase !== "skate") return state;
+      return throwSkate(state, action.dice);
 
     case "UPGRADE": {
       if (state.phase !== "upgrade") return state;

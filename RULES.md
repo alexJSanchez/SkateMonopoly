@@ -50,7 +50,7 @@ The clip fee is **10% of the filmer's price**, rounded to the nearest dollar. Fo
 
 When you start a turn in jail you can:
 
-- **Roll for doubles.** Doubles get you out and you move that many spaces, with no extra roll.
+- **Skate for doubles** (roll the dice). Doubles get you out and you move that many spaces, with no extra roll.
 - **Pay $50** before rolling to leave immediately, then roll as normal.
 
 If you fail to roll doubles 3 times, you automatically pay $50 on the third attempt and move by that roll.

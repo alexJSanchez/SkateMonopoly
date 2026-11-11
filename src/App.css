@@ -791,3 +791,82 @@ body {
 .sidebar { font-size: 14px; line-height: 1.35; }
 .sidebar .status-card h2 { font-size: 1.15em; margin-bottom: 3px; }
 .sidebar .status-card p { margin: 2px 0; }
+
+/* ---------- dice above the head, smoother movement ---------- */
+/* everything above the head stacks: dice on top, speech bubble below */
+.head-stack {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateZ(30px);
+  transform-style: preserve-3d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  pointer-events: none;
+}
+.head-stack .speech-bubble {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  pointer-events: auto;
+}
+.head-dice {
+  --s: calc(var(--board-size) / 22);
+  display: flex;
+  gap: calc(var(--s) * 0.7);
+  padding: calc(var(--s) * 0.5);
+  transform-style: preserve-3d;
+}
+.head-dice .die { transform: none; }
+.head-dice .die::after { display: none; }
+
+@keyframes die-tumble {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(var(--s) * -2.2)) scale(0.5) rotateX(900deg) rotateY(720deg) rotateZ(300deg);
+  }
+  20% { opacity: 1; }
+  65% { transform: translateY(0) scale(1) rotateX(40deg) rotateY(-30deg) rotateZ(10deg); }
+  80% { transform: translateY(calc(var(--s) * -0.3)) rotateX(10deg) rotateY(8deg); }
+  100% { transform: none; }
+}
+.die-tumble { animation: die-tumble 1s ease-out both; }
+
+/* pieces glide continuously and hop on every step */
+.piece-anchor { transition: left 0.22s linear, top 0.22s linear; }
+.piece-hop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+.piece-hop.walking { animation: hop 0.22s ease-in-out infinite; }
+@keyframes hop {
+  0%, 100% { transform: translateZ(0); }
+  50% { transform: translateZ(calc(var(--board-size) / 30)); }
+}
+
+/* camera: gentle ease between turns, steady glide while a piece walks */
+.iso-board.board { transition: transform 0.7s ease-in-out; }
+.iso-board.board.walking { transition: transform 0.22s linear; }
+.game.dragging .iso-board.board { transition: none; }
+
+/* land with the rolled face front and centre, bigger so the pips are easy to read */
+.head-dice { --s: calc(var(--board-size) / 17); }
+.die-face { border-width: 2px; border-color: #777; }
+.die-face .pip { margin: 10%; }
+@keyframes die-tumble {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(var(--s) * -2.2)) scale(0.5) rotateX(900deg) rotateY(720deg) rotateZ(300deg);
+  }
+  20% { opacity: 1; }
+  70% { transform: translateY(0) scale(1) rotateX(25deg) rotateY(-20deg); }
+  85% { transform: translateY(calc(var(--s) * -0.2)) rotateX(6deg) rotateY(5deg); }
+  100% { transform: none; }
+}

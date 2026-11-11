@@ -29,10 +29,11 @@ export function createGame() {
     phase: "roll",
     dice: null, // [a, b] from the most recent roll
     rollCount: 0, // increments every roll so the UI can replay the tumble
+    roller: null, // index of the player who made the most recent roll
     doublesCount: 0,
     pendingDouble: false, // did the roll that led to "buy" come up doubles?
     winner: null,
-    message: "Roll the dice to start the game!",
+    message: "Hit Skate to start the game!",
   };
 }
 
@@ -94,7 +95,7 @@ function endTurn(state, rolledDouble) {
   if (state.phase === "gameover") return state;
   const cur = state.players[state.turn];
   if (rolledDouble && !cur.bankrupt && !cur.inJail) {
-    return say({ ...state, phase: "roll" }, "Doubles! Roll again.");
+    return say({ ...state, phase: "roll" }, "Doubles! Skate again.");
   }
   let next = state.turn;
   do {
@@ -176,6 +177,7 @@ export function gameReducer(state, action) {
         ...state,
         dice: [a, b],
         rollCount: state.rollCount + 1,
+        roller: i,
         message: `${name} rolled ${a} + ${b}.`,
       };
 
@@ -230,7 +232,7 @@ export function gameReducer(state, action) {
       if (state.phase !== "roll" || !p.inJail || p.money < JAIL_FEE) return state;
       let s = pay(state, i, null, JAIL_FEE);
       s = patchPlayer(s, i, { inJail: false, jailAttempts: 0 });
-      return { ...s, message: `${name} paid $${JAIL_FEE} and left jail. Roll to move.` };
+      return { ...s, message: `${name} paid $${JAIL_FEE} and left jail. Skate to move.` };
     }
 
     case "RESET":

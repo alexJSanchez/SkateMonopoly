@@ -30,14 +30,15 @@ const FACE_UP = {
   6: "rotateY(180deg)",
 };
 
-// A real 3D cube die lying on the board. `rollKey` replays the tumble.
-function Die({ value, yaw, rollKey, tumble }) {
+// A real 3D cube die. `rollKey` replays the tumble; it lands with the rolled
+// `value` facing the camera (only a slight tilt so it still reads as a cube).
+function Die({ value, rollKey }) {
   return (
     <div className="die">
-      <div className={tumble ? "die-tumble" : undefined} key={rollKey}>
+      <div className="die-tumble" key={rollKey}>
         <div
           className="die-cube"
-          style={{ transform: `rotateZ(${yaw}deg) ${FACE_UP[value]}` }}
+          style={{ transform: `rotateX(-8deg) rotateY(10deg) ${FACE_UP[value]}` }}
         >
           {[1, 2, 3, 4, 5, 6].map((face) => (
             <div key={face} className={`die-face f${face}`}>
@@ -57,7 +58,8 @@ function Die({ value, yaw, rollKey, tumble }) {
 const TYPE_ICONS = { chance: "❓", trivia: "🧠", tax: "💸" };
 const rollDie = () => Math.floor(Math.random() * 6) + 1;
 
-const STEP_MS = 160; // time a piece spends on each space while walking
+const DICE_MS = 1300; // dice tumble above the head, then a beat before moving
+const STEP_MS = 220; // time a piece spends on each space (matches the CSS glide + hop)
 const MAX_WALK = 12; // longer jumps (e.g. Go to Jail) teleport instead of walking
 const FOLLOW_ZOOM = 1.35;
 const MIN_ZOOM = 0.4;
@@ -97,6 +99,7 @@ function spaceDetail(space) {
 export default function Board() {
   const [game, dispatch] = useReducer(gameReducer, undefined, createGame);
   const { players, turn, phase, dice, message, winner } = game;
+  const roller = game.roller ?? turn;
   const current = players[turn];
   const currentSpace = boardSpaces[current.space];
 
@@ -112,11 +115,17 @@ export default function Board() {
   const dragRef = useRef(null);
   const boardRef = useRef(null);
 
+  // `holding` is the short pause while the dice tumble, before anyone moves.
+  const [holding, setHolding] = useState(false);
+  const holdTimer = useRef(null);
+  useEffect(() => () => clearTimeout(holdTimer.current), []);
+
   const movingIdx = shown.findIndex((s, i) => s !== players[i].space);
-  const busy = movingIdx >= 0;
+  const walkingIdx = holding ? -1 : movingIdx;
+  const busy = holding || movingIdx >= 0;
 
   useEffect(() => {
-    if (movingIdx < 0) return undefined;
+    if (holding || movingIdx < 0) return undefined;
     const target = players[movingIdx].space;
     const n = boardSpaces.length;
     const distance = (target - shown[movingIdx] + n) % n;
@@ -128,15 +137,20 @@ export default function Board() {
       );
     }, STEP_MS);
     return () => clearTimeout(timer);
-  }, [shown, players, movingIdx]);
+  }, [shown, players, movingIdx, holding]);
 
-  // The camera follows whoever is moving, otherwise whoever's turn it is.
-  const focus = busy ? movingIdx : turn;
+  // The camera follows whoever is rolling/moving, otherwise whoever's turn it is.
+  const focus = holding ? roller : movingIdx >= 0 ? movingIdx : turn;
   const focusPoint = cellCenter(shown[focus]);
   const camera = autoFollow ? focusPoint : pan;
 
   const act = (action) => {
     setAutoFollow(true); // new action: look at the result
+    if (action.type === "ROLL") {
+      setHolding(true);
+      clearTimeout(holdTimer.current);
+      holdTimer.current = setTimeout(() => setHolding(false), DICE_MS);
+    }
     dispatch(action);
   };
   const roll = () => act({ type: "ROLL", dice: [rollDie(), rollDie()] });
@@ -241,7 +255,7 @@ export default function Board() {
         {/* The first 40 children must be the spaces: App.css positions them with nth-child */}
         <div
           ref={boardRef}
-          className="board iso-board"
+          className={`board iso-board${walkingIdx >= 0 ? " walking" : ""}`}
           style={{
             "--zoom": zoom,
             "--tx": `${(0.5 - camera.x) * 100}%`,
@@ -277,12 +291,12 @@ export default function Board() {
           })}
 
           <div className="board-center">
-            <div className="center-dice" aria-hidden="true">
-              <Die value={dice ? dice[0] : 1} yaw={14} rollKey={`a${game.rollCount}`} tumble={!!dice} />
-              <Die value={dice ? dice[1] : 2} yaw={-20} rollKey={`b${game.rollCount}`} tumble={!!dice} />
-            </div>
             <p className="center-message" aria-live="polite">
-              {phase === "gameover" ? `🏆 ${PLAYER_NAMES[winner]} wins!` : message}
+              {holding
+                ? "Rolling…"
+                : phase === "gameover"
+                  ? `🏆 ${PLAYER_NAMES[winner]} wins!`
+                  : message}
             </p>
             <div className="center-title">
               🛹 SKATE
@@ -320,12 +334,14 @@ export default function Board() {
               !busy &&
               ((phase === "gameover" && i === winner) ||
                 (phase !== "gameover" && i === turn));
+            // The dice hover above the head of whoever rolled, until they land.
+            const showDice = busy && i === roller && dice;
             const bubble = showBubble && (
               <div className="speech-bubble">
                 {phase === "roll" && (
                   <>
                     <button className="roll-button" onClick={roll}>
-                      {current.inJail ? "Roll for doubles" : "Roll dice 🎲"}
+                      {current.inJail ? "Skate for doubles" : "Skate 🛹"}
                     </button>
                     {current.inJail && (
                       <button
@@ -378,10 +394,22 @@ export default function Board() {
                 role="img"
                 aria-label={`${PLAYER_NAMES[i]} piece on ${boardSpaces[shown[i]].name}`}
               >
-                <div className={`piece-body p${i}`}>
-                  <span className="piece-emoji">🛹</span>
-                  <span className="piece-num">{i + 1}</span>
-                  {bubble}
+                <div className={`piece-hop${walkingIdx === i ? " walking" : ""}`}>
+                  <div className={`piece-body p${i}`}>
+                    <span className="piece-emoji">🛹</span>
+                    <span className="piece-num">{i + 1}</span>
+                    {(showDice || bubble) && (
+                      <div className="head-stack">
+                        {showDice && (
+                          <div className="head-dice" aria-hidden="true">
+                            <Die value={dice[0]} rollKey={`a${game.rollCount}`} />
+                            <Die value={dice[1]} rollKey={`b${game.rollCount}`} />
+                          </div>
+                        )}
+                        {bubble}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );

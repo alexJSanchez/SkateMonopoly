@@ -761,3 +761,33 @@ body {
 .game.dragging { cursor: grabbing; }
 .game.dragging .iso-board { transition: none; }
 .game button { cursor: pointer; }
+
+/* "Spots owned: N" dropdown */
+.sidebar .spots-owned { pointer-events: auto; margin: 2px 0; }
+.sidebar .spots-owned summary { cursor: pointer; list-style-position: inside; }
+.sidebar .spots-owned ul { margin: 4px 0 0; padding-left: 1.4em; }
+.sidebar .spots-owned li { margin: 1px 0; }
+
+/* readable player info: bigger text, strong outline so it reads on any background */
+.sidebar { font-size: 17px; line-height: 1.45; }
+.sidebar .status-card {
+  font-size: 1em;
+  font-weight: 600;
+  color: #fff;
+  text-shadow:
+    -1px -1px 0 #12263a, 1px -1px 0 #12263a, -1px 1px 0 #12263a, 1px 1px 0 #12263a,
+    0 2px 6px rgba(0, 0, 0, 0.7);
+}
+.sidebar .status-card h2 { font-size: 1.3em; font-weight: 800; margin-bottom: 6px; }
+.sidebar .status-card p { margin: 4px 0; }
+.sidebar .status-card.current h2 {
+  text-shadow:
+    -1px -1px 0 #12263a, 1px -1px 0 #12263a, -1px 1px 0 #12263a, 1px 1px 0 #12263a,
+    0 0 10px gold;
+}
+.sidebar .spots-owned li { font-weight: 500; }
+
+/* toned down: a bit smaller, still outlined for contrast */
+.sidebar { font-size: 14px; line-height: 1.35; }
+.sidebar .status-card h2 { font-size: 1.15em; margin-bottom: 3px; }
+.sidebar .status-card p { margin: 2px 0; }

@@ -84,7 +84,7 @@ function Camcorder() {
 function spaceDetail(space) {
   switch (space.type) {
     case "property":
-      return `Price $${space.price} · Rent $${rentFor(space)}`;
+      return `Filmer $${space.price} · Clip fee $${rentFor(space)}`;
     case "trivia":
       return "Pick Up Card";
     case "tax":
@@ -147,7 +147,7 @@ export default function Board() {
   };
 
   const onPointerDown = (e) => {
-    if (e.button !== 0 || e.target.closest("button")) return;
+    if (e.button !== 0 || e.target.closest("button, details")) return;
     dragRef.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
     if (autoFollow) {
@@ -216,12 +216,16 @@ export default function Board() {
                       🔒 In jail (attempt {p.jailAttempts}/{MAX_JAIL_ATTEMPTS})
                     </p>
                   )}
-                  <p>
-                    🏠{" "}
-                    {p.properties.length
-                      ? p.properties.map((s) => boardSpaces[s].name).join(", ")
-                      : "No properties yet"}
-                  </p>
+                  <details className="spots-owned">
+                    <summary>📹 Spots owned: {p.properties.length}</summary>
+                    {p.properties.length > 0 && (
+                      <ul>
+                        {p.properties.map((s) => (
+                          <li key={s}>{boardSpaces[s].name}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </details>
                 </>
               )}
             </div>
@@ -263,7 +267,7 @@ export default function Board() {
                   )}
                   <p>{space.name}</p>
                   {owner >= 0 ? (
-                    <p>Owned by {PLAYER_NAMES[owner]}</p>
+                    <p>Filmer: {PLAYER_NAMES[owner]}</p>
                   ) : (
                     spaceDetail(space) && <p>{spaceDetail(space)}</p>
                   )}
@@ -298,7 +302,7 @@ export default function Board() {
                 className="piece-anchor camera-anchor"
                 style={{ left: `${x * 100}%`, top: `${(y - 0.012) * 100}%` }}
                 role="img"
-                aria-label={`${space.name} owned by ${PLAYER_NAMES[owner]}`}
+                aria-label={`${space.name}: filmer hired by ${PLAYER_NAMES[owner]}`}
               >
                 <div className={`camera-body p${owner}`}>
                   <Camcorder />
@@ -343,7 +347,7 @@ export default function Board() {
                       className="roll-button"
                       onClick={() => act({ type: "BUY" })}
                     >
-                      Buy 📹
+                      Hire filmer 📹
                     </button>
                     <button
                       className="secondary-button"

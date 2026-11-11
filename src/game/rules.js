@@ -125,15 +125,15 @@ function moveAndResolve(state, total, rolledDouble) {
         if (s.players[i].money >= space.price) {
           return say(
             { ...s, phase: "buy", pendingDouble: rolledDouble },
-            `Buy it for $${space.price}?`
+            `Hire a filmer here for $${space.price}?`
           );
         }
-        s = say(s, `Can't afford $${space.price}.`);
+        s = say(s, `Can't afford a filmer ($${space.price}).`);
       } else if (owner === i) {
-        s = say(s, "You own this one.");
+        s = say(s, "Your filmer is already here.");
       } else {
         const rent = rentFor(space);
-        s = say(s, `Paid $${rent} rent to ${PLAYER_NAMES[owner]}.`);
+        s = say(s, `Paid $${rent} clip fee to ${PLAYER_NAMES[owner]}'s filmer.`);
         s = pay(s, i, owner, rent);
       }
       break;
@@ -215,13 +215,13 @@ export function gameReducer(state, action) {
         money: state.players[i].money - price,
         properties: [...state.players[i].properties, index],
       });
-      s = { ...s, message: `${name} bought ${boardSpaces[index].name} for $${price}.` };
+      s = { ...s, message: `${name} hired a filmer at ${boardSpaces[index].name} for $${price}.` };
       return endTurn(s, state.pendingDouble);
     }
 
     case "SKIP": {
       if (state.phase !== "buy") return state;
-      const s = { ...state, message: `${name} passed on ${boardSpaces[state.players[i].space].name}.` };
+      const s = { ...state, message: `${name} didn't hire a filmer at ${boardSpaces[state.players[i].space].name}.` };
       return endTurn(s, state.pendingDouble);
     }
 

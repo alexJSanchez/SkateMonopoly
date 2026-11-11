@@ -1,6 +1,8 @@
 # Skate Monopoly Rules
 
-Two players travel around a 40-space skate-themed board, buying spots, brands and shops, and charging rent to the other player. The last player who isn't bankrupt wins.
+Two skaters travel around the world to famous skate spots. At each spot you can pay a **filmer** to capture a trick you land there. Your filmer then earns **clip fees** whenever the other skater lands on that spot. The last skater who isn't bankrupt wins.
+
+> Working terms: "hire a filmer" and "clip fee" are placeholders until we pick a better name.
 
 ## Setup
 
@@ -29,18 +31,20 @@ Collect **$200** each time you pass or land on SK8. You do not collect it if you
 
 | Space | What happens |
 | --- | --- |
-| **Property** (unowned) | You may **buy** it for its price or **skip**. If you can't afford it, nothing happens. |
-| **Property** (owned by the other player) | Pay them **rent**. |
-| **Property** (owned by you) | Nothing happens. |
+| **Spot** (no filmer yet) | You may **hire a filmer** for the spot's price, or skip. If you can't afford it, nothing happens. |
+| **Spot** (the other player's filmer is there) | Pay them a **clip fee**. |
+| **Spot** (your own filmer is there) | Nothing happens. |
 | **New Setup** (tax) | Pay the bank the **lower** of 10% of your money or $200. |
 | **Skate Trivia / Chance** | Card spaces. Cards are not implemented yet, so nothing happens. |
 | **Jail** (just visiting) | Nothing happens. |
 | **Free Parking** | Nothing happens. |
 | **Go to Jail** | You are sent to Jail. |
 
-### Rent
+A spot with a filmer shows a camcorder in the owner's colour.
 
-Rent is **10% of the property's price**, rounded to the nearest dollar. For example, Burnside ($50) charges $5 and X-Games ($400) charges $40.
+### Clip fee
+
+The clip fee is **10% of the filmer's price**, rounded to the nearest dollar. For example, Burnside ($50) charges $5 and X-Games ($400) charges $40.
 
 ## Jail
 
@@ -54,12 +58,12 @@ If you fail to roll doubles 3 times, you automatically pay $50 on the third atte
 ## Bankruptcy and winning
 
 - If you owe more than you have, you pay everything you have to whoever you owe, and you are **bankrupt** and out of the game.
-- A bankrupt player's properties return to the bank and can be bought again.
+- A bankrupt player's filmers leave, and those spots can be hired again.
 - The last player who is not bankrupt **wins**.
 
 ## Not yet implemented
 
 - Chance and Skate Trivia cards
-- Rent bonuses for owning a whole country or brand group
-- Selling or trading properties
+- Clip-fee bonuses for filming a whole country or brand group
+- Selling or trading filmers
 - Free Parking payouts

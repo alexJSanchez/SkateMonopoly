@@ -1470,3 +1470,28 @@ body {
 .head-stack { gap: 8px; }
 .speech-bubble { font-size: calc(var(--board-size) / 66); padding: 8px 10px; gap: 5px; }
 .speech-bubble button { padding: 0.45em 1em; }
+
+/* ---------- screen-space layer: dice, card and bubble above each head ---------- */
+.hud-layer {
+  --board-size: 900px; /* the dice / card / bubble sizes are defined from this */
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hud-stack.head-stack {
+  position: absolute;
+  bottom: auto;
+  left: 0;
+  top: 0;
+  transform: none; /* placed by script each frame */
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+/* when the stack has been pushed away from the head, hide the bubble's tail */
+.hud-stack.clamped .speech-bubble::before,
+.hud-stack.clamped .speech-bubble::after { display: none; }
+
+/* the board eases down while a card / bubble / dice stack is showing, to make room above the head */
+.iso-zoomer { transform: translateY(var(--shift-y, 0px)) scale(var(--zoom)); }

@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useReducer, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import boardSpaces from "../game/BoardSpaces.jsx";
 import {
   PLAYER_NAMES,
@@ -425,6 +426,52 @@ export default function Board() {
     dragRef.current = null;
     setDragging(false);
   };
+  // The HUD layer holds a stack (dice, card, bubble) for each player who has one.
+  // Every frame, each stack is placed above its player's head on screen, then
+  // clamped so all of it stays inside the window whatever the camera zoom is.
+  const [hudEl, setHudEl] = useState(null);
+  const zoomerRef = useRef(null);
+  useEffect(() => {
+    if (!hudEl) return undefined;
+    const MARGIN = 8;
+    const GAP = 10; // between the head and the stack
+    let frame;
+    const tick = () => {
+      // While anything is showing above a head, ease the board down a little so
+      // the stack has room above the character instead of being squashed over it.
+      zoomerRef.current?.style.setProperty(
+        "--shift-y",
+        hudEl.children.length > 0 ? "20vh" : "0px"
+      );
+      const layer = hudEl.getBoundingClientRect();
+      for (const stack of hudEl.children) {
+        const anchor = boardRef.current?.querySelector(
+          `[data-piece="${stack.dataset.player}"]`
+        );
+        const body = anchor?.querySelector(".piece-body");
+        if (!anchor || !body) continue;
+        const ground = anchor.getBoundingClientRect(); // a point: where the feet are
+        const bodyHeight = body.getBoundingClientRect().height;
+        const w = stack.offsetWidth;
+        const h = stack.offsetHeight;
+        const headX = ground.left - layer.left;
+        const wantTop = ground.top - layer.top - bodyHeight - GAP - h;
+        const left = Math.min(Math.max(headX - w / 2, MARGIN), layer.width - w - MARGIN);
+        const top = Math.min(Math.max(wantTop, MARGIN), layer.height - h - MARGIN);
+        stack.style.left = `${left}px`;
+        stack.style.top = `${top}px`;
+        // once it has been pushed off its head, the bubble's tail would point the wrong way
+        stack.classList.toggle(
+          "clamped",
+          Math.abs(left + w / 2 - headX) > 4 || Math.abs(top - wantTop) > 4
+        );
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [hudEl]);
+
   // Scroll / trackpad pinch zooms the camera only. The listener is native and
   // non-passive so it can stop the browser from also zooming the whole page.
   const gameRef = useRef(null);
@@ -541,7 +588,7 @@ export default function Board() {
         </button>
 
         {/* The first 40 children must be the spaces: App.css positions them with nth-child */}
-        <div className="iso-zoomer" style={{ "--zoom": viewZoom }}>
+        <div className="iso-zoomer" ref={zoomerRef} style={{ "--zoom": viewZoom }}>
         <div
           ref={boardRef}
           className={`board iso-board${walkingIdx >= 0 ? " walking" : ""}`}
@@ -771,6 +818,7 @@ export default function Board() {
               <div
                 key={i}
                 className="piece-anchor"
+                data-piece={i}
                 style={{
                   left: `calc(${x * 100}% + ${offset}px)`,
                   top: `${y * 100}%`,
@@ -782,8 +830,13 @@ export default function Board() {
                   <div className={`piece-body p${i}`}>
                     <span className="piece-emoji">🛹</span>
                     <span className="piece-num">{i + 1}</span>
-                    {(showDice || rivalDice || bubble || showCard || showNext) && (
-                      <div className="head-stack">
+                    {/* The dice, card and bubble are drawn in a screen-space layer
+                        (see hud-layer) that follows this head, so they keep a
+                        constant size and never get cropped by the viewport. */}
+                    {(showDice || rivalDice || bubble || showCard || showNext) &&
+                      hudEl &&
+                      createPortal(
+                      <div className="head-stack hud-stack" data-player={i}>
                         {showDice && (
                           <div className="head-dice" aria-hidden="true">
                             <Die value={dice[0]} rollKey={`a${game.rollCount}`} />
@@ -812,7 +865,8 @@ export default function Board() {
                             </button>
                           </div>
                         )}
-                      </div>
+                      </div>,
+                      hudEl
                     )}
                   </div>
                 </div>
@@ -822,6 +876,8 @@ export default function Board() {
         </div>
         </div>
       </div>
+      {/* Screen-space layer for each player's dice, location card and bubble */}
+      <div className="hud-layer" ref={setHudEl} />
     </div>
   );
 }

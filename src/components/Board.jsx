@@ -460,6 +460,19 @@ export default function Board() {
         const h = stack.offsetHeight;
         const headX = ground.left - layer.left;
         const feetY = ground.top - layer.top;
+        if (stack.classList.contains("collapsed")) {
+          // Collapsed: just the eye, parked right beside the player.
+          const bodyBox = body.getBoundingClientRect();
+          stack.style.left = `${Math.min(
+            headX + bodyBox.width / 2 + 6,
+            layer.width - w - MARGIN
+          )}px`;
+          stack.style.top = `${Math.min(
+            Math.max(feetY - bodyHeight / 2 - h / 2, MARGIN),
+            layer.height - h - MARGIN
+          )}px`;
+          continue;
+        }
         const left = Math.min(Math.max(headX - w / 2, MARGIN), layer.width - w - MARGIN);
         // Above the head if it fits there, otherwise below the feet, otherwise
         // wherever there is more room (kept inside the window either way).

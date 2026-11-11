@@ -1571,3 +1571,11 @@ body {
 }
 /* when collapsed, keep a little room so the eye sits above the head */
 .hud-stack.collapsed { min-width: 36px; min-height: 36px; }
+
+/* collapsed: the eye is the whole stack, sitting beside the player */
+.hud-stack.collapsed { min-width: 30px; min-height: 30px; }
+.hud-stack.collapsed .stack-toggle {
+  top: 50%;
+  right: 50%;
+  transform: translate(50%, -50%);
+}

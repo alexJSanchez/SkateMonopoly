@@ -492,3 +492,24 @@ body {
 }
 .piece.p0 { align-self: end; justify-self: start; margin: 4px; }
 .piece.p1 { align-self: end; justify-self: end; margin: 4px; }
+
+/* ---------- rules UI ---------- */
+.actions { display: flex; flex-direction: column; gap: 8px; }
+.secondary-button {
+  font-size: clamp(12px, 1.4vw, 16px);
+  color: #1b1b1b;
+  background: #fff;
+  border: 1px solid #1b1b1b;
+}
+.secondary-button:disabled, .roll-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.status-card.bankrupt { opacity: 0.55; }
+
+/* ownership strip along the bottom of an owned space */
+.space[class*="owned-p"]::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 8px;
+}
+.space.owned-p0::after { background: #2b6cb0; }
+.space.owned-p1::after { background: #c53030; }

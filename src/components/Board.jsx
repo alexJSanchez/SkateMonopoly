@@ -1,18 +1,23 @@
-import { useState } from "react";
+import { useReducer } from "react";
 import boardSpaces from "../game/BoardSpaces.jsx";
+import {
+  PLAYER_NAMES,
+  JAIL_FEE,
+  MAX_JAIL_ATTEMPTS,
+  createGame,
+  gameReducer,
+  ownerOf,
+  rentFor,
+} from "../game/rules.js";
 
-const STARTING_MONEY = 1500;
-const PLAYER_NAMES = ["Player One", "Player Two"];
 const DICE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
 const TYPE_ICONS = { chance: "❓", trivia: "🧠", tax: "💸" };
-
-const initialPlayers = () =>
-  PLAYER_NAMES.map(() => ({ space: 0, money: STARTING_MONEY, properties: [] }));
+const rollDie = () => Math.floor(Math.random() * 6) + 1;
 
 function spaceDetail(space) {
   switch (space.type) {
     case "property":
-      return `Price $${space.price}`;
+      return `Price $${space.price} · Rent $${rentFor(space)}`;
     case "trivia":
       return "Pick Up Card";
     case "tax":
@@ -22,39 +27,13 @@ function spaceDetail(space) {
   }
 }
 
-function describeLanding(space) {
-  switch (space.type) {
-    case "property":
-      return `${space.name} is for sale for $${space.price}.`;
-    case "trivia":
-      return "Draw a Skate Trivia card!";
-    case "chance":
-      return "Draw a Chance card!";
-    case "tax":
-      return `Pay 10% or $${space.tax}.`;
-    default:
-      return null;
-  }
-}
-
 export default function Board() {
-  const [players, setPlayers] = useState(initialPlayers);
-  // Index into players: 0 = player one, 1 = player two
-  const [turn, setTurn] = useState(0);
-  // { player, roll, space } for the most recent move
-  const [lastMove, setLastMove] = useState(null);
+  const [game, dispatch] = useReducer(gameReducer, undefined, createGame);
+  const { players, turn, phase, dice, message, winner } = game;
+  const current = players[turn];
+  const currentSpace = boardSpaces[current.space];
 
-  const movePiece = () => {
-    const roll = Math.floor(Math.random() * 6) + 1;
-    const to = (players[turn].space + roll) % boardSpaces.length;
-    setLastMove({ player: turn, roll, space: to });
-    setPlayers((prev) =>
-      prev.map((p, i) => (i === turn ? { ...p, space: to } : p))
-    );
-    setTurn((t) => (t + 1) % players.length);
-  };
-
-  const landed = lastMove ? boardSpaces[lastMove.space] : null;
+  const roll = () => dispatch({ type: "ROLL", dice: [rollDie(), rollDie()] });
 
   return (
     <div className="game">
@@ -62,11 +41,13 @@ export default function Board() {
       {/* The first 40 children must be the spaces: App.css positions them with nth-child */}
       <div className="board">
         {boardSpaces.map((space, i) => {
+          const owner = ownerOf(game, i);
           const classes = [
             "space",
             space.type === "corner" ? `corner ${space.corner}` : space.type,
             space.group ? `group-${space.group}` : "",
-            players[turn].space === i ? "active" : "",
+            owner >= 0 ? `owned-p${owner}` : "",
+            phase !== "gameover" && current.space === i ? "active" : "",
           ]
             .filter(Boolean)
             .join(" ");
@@ -77,68 +58,128 @@ export default function Board() {
                   <span className="icon">{TYPE_ICONS[space.type]}</span>
                 )}
                 <p>{space.name}</p>
-                {spaceDetail(space) && <p>{spaceDetail(space)}</p>}
+                {owner >= 0 ? (
+                  <p>Owned by {PLAYER_NAMES[owner]}</p>
+                ) : (
+                  spaceDetail(space) && <p>{spaceDetail(space)}</p>
+                )}
               </div>
             </div>
           );
         })}
 
         <div className="center-panel">
-          <h2 className={`turn-banner p${turn}`}>{PLAYER_NAMES[turn]}&apos;s turn</h2>
+          {phase === "gameover" ? (
+            <h2 className={`turn-banner p${winner}`}>
+              🏆 {PLAYER_NAMES[winner]} wins!
+            </h2>
+          ) : (
+            <h2 className={`turn-banner p${turn}`}>
+              {PLAYER_NAMES[turn]}&apos;s turn
+            </h2>
+          )}
 
           <div className="roll-area">
             <span className="dice-face" aria-hidden="true">
-              {lastMove ? DICE_FACES[lastMove.roll - 1] : "🎲"}
+              {dice ? `${DICE_FACES[dice[0] - 1]} ${DICE_FACES[dice[1] - 1]}` : "🎲"}
             </span>
-            <button className="roll-button" onClick={movePiece}>
-              Roll dice
-            </button>
+
+            {phase === "roll" && (
+              <div className="actions">
+                <button className="roll-button" onClick={roll}>
+                  {current.inJail ? "Roll for doubles" : "Roll dice"}
+                </button>
+                {current.inJail && (
+                  <button
+                    className="secondary-button"
+                    disabled={current.money < JAIL_FEE}
+                    onClick={() => dispatch({ type: "PAY_JAIL" })}
+                  >
+                    Pay ${JAIL_FEE} to leave jail
+                  </button>
+                )}
+              </div>
+            )}
+
+            {phase === "buy" && (
+              <div className="actions">
+                <button
+                  className="roll-button"
+                  onClick={() => dispatch({ type: "BUY" })}
+                >
+                  Buy {currentSpace.name} (${currentSpace.price})
+                </button>
+                <button
+                  className="secondary-button"
+                  onClick={() => dispatch({ type: "SKIP" })}
+                >
+                  Skip
+                </button>
+              </div>
+            )}
+
+            {phase === "gameover" && (
+              <button
+                className="roll-button"
+                onClick={() => dispatch({ type: "RESET" })}
+              >
+                Play again
+              </button>
+            )}
           </div>
 
           <p className="event-log" aria-live="polite">
-            {lastMove ? (
-              <>
-                <strong>{PLAYER_NAMES[lastMove.player]}</strong> rolled a{" "}
-                {lastMove.roll} and landed on <strong>{landed.name}</strong>.{" "}
-                {describeLanding(landed)}
-              </>
-            ) : (
-              "Roll the dice to start the game!"
-            )}
+            {message}
           </p>
 
           <div className="status-cards">
             {players.map((p, i) => (
               <div
                 key={i}
-                className={`status-card${i === turn ? " current" : ""}`}
+                className={`status-card${
+                  i === turn && phase !== "gameover" ? " current" : ""
+                }${p.bankrupt ? " bankrupt" : ""}`}
               >
                 <h2>
                   <span className={`badge p${i}`} /> {PLAYER_NAMES[i]}
                 </h2>
-                <p>📍 {boardSpaces[p.space].name}</p>
-                <p>💵 ${p.money}</p>
-                <p>
-                  🏠{" "}
-                  {p.properties.length
-                    ? p.properties.join(", ")
-                    : "No properties yet"}
-                </p>
+                {p.bankrupt ? (
+                  <p>💀 Bankrupt</p>
+                ) : (
+                  <>
+                    <p>📍 {boardSpaces[p.space].name}</p>
+                    <p>💵 ${p.money}</p>
+                    {p.inJail && (
+                      <p>
+                        🔒 In jail (attempt {p.jailAttempts}/{MAX_JAIL_ATTEMPTS})
+                      </p>
+                    )}
+                    <p>
+                      🏠{" "}
+                      {p.properties.length
+                        ? p.properties.map((s) => boardSpaces[s].name).join(", ")
+                        : "No properties yet"}
+                    </p>
+                  </>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {players.map((p, i) => (
-          <div
-            key={i}
-            className={`piece p${i} position-${p.space}`}
-            role="img"
-            aria-label={`${PLAYER_NAMES[i]} piece on ${boardSpaces[p.space].name}`}
-          >
-            {i + 1}
-          </div>
-        ))}
+        {players.map(
+          (p, i) =>
+            !p.bankrupt && (
+              <div
+                key={i}
+                className={`piece p${i} position-${p.space}`}
+                role="img"
+                aria-label={`${PLAYER_NAMES[i]} piece on ${boardSpaces[p.space].name}`}
+              >
+                {i + 1}
+              </div>
+            )
+        )}
       </div>
     </div>
   );

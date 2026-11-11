@@ -28,6 +28,7 @@ export function createGame() {
     // "roll" -> waiting for a roll | "buy" -> deciding on a property | "gameover"
     phase: "roll",
     dice: null, // [a, b] from the most recent roll
+    rollCount: 0, // increments every roll so the UI can replay the tumble
     doublesCount: 0,
     pendingDouble: false, // did the roll that led to "buy" come up doubles?
     winner: null,
@@ -171,7 +172,12 @@ export function gameReducer(state, action) {
       const [a, b] = action.dice;
       const total = a + b;
       const isDouble = a === b;
-      let s = { ...state, dice: [a, b], message: `${name} rolled ${a} + ${b}.` };
+      let s = {
+        ...state,
+        dice: [a, b],
+        rollCount: state.rollCount + 1,
+        message: `${name} rolled ${a} + ${b}.`,
+      };
 
       if (s.players[i].inJail) {
         if (isDouble) {

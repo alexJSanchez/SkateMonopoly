@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useReducer, useRef, useState } from "react";
 import boardSpaces from "../game/BoardSpaces.jsx";
 import {
@@ -9,7 +10,7 @@ import {
   ownerOf,
   rentFor,
 } from "../game/rules.js";
-import { cellCenter } from "../game/layout.js";
+import { cellCenter, cellTopEdge } from "../game/layout.js";
 
 // Which of the 9 cells in a 3x3 grid hold a pip for each face value.
 const PIPS = {
@@ -68,18 +69,102 @@ const COS_TILT = Math.cos((55 * Math.PI) / 180); // matches rotateX(55deg) in Ap
 const SIN_45 = Math.SQRT1_2; // sin and cos of the 45deg board rotation
 const SHARED_SPACE_OFFSET = 14; // px apart when both pieces share a space
 
-// A little VX1000-style camcorder, tinted with the owner's colour.
-function Camcorder() {
+// ---------- 3D camcorder game piece ----------
+// Built from CSS 3D boxes and stacked discs, modelled on a Sony VX1000: grey
+// body, long lens with a wide fisheye hood, handle with a mic on top, and the
+// viewfinder at the back. Units are `--u` (see App.css); x runs along the
+// camera (lens at x=0), y across it, z up. The owner's colour is the base
+// plate and the stripe on the side.
+const u = (n) => `calc(var(--u) * ${n})`;
+
+// A box whose footprint starts at (x, y) and sits at height z.
+// `south` is drawn on the side face the viewer sees (the camera's flank).
+function Box({ x, y, z, w, d, h, color, top, south }) {
   return (
-    <svg viewBox="0 0 64 48" aria-hidden="true">
-      <rect x="2" y="17" width="14" height="14" rx="2" fill="#222" />
-      <circle cx="6" cy="24" r="7" fill="#333" stroke="#fff" strokeWidth="1.5" />
-      <circle cx="6" cy="24" r="3" fill="#8ab4ff" />
-      <rect x="14" y="12" width="36" height="24" rx="4" fill="currentColor" stroke="#111" strokeWidth="2" />
-      <rect x="34" y="5" width="16" height="8" rx="2" fill="#222" />
-      <rect x="22" y="35" width="22" height="6" rx="2" fill="#222" />
-      <circle cx="45" cy="20" r="2.5" fill="#ff3b30" />
-    </svg>
+    <div
+      className="box"
+      style={{
+        left: u(x),
+        top: u(y),
+        width: u(w),
+        height: u(d),
+        transform: `translateZ(${u(z)})`,
+        "--c": color,
+        "--ct": top ?? color,
+        "--w": u(w),
+        "--d": u(d),
+        "--h": u(h),
+      }}
+    >
+      <i className="f-top" />
+      <i className="f-n" />
+      <i className="f-w" />
+      <i className="f-e" />
+      <i className="f-s">{south}</i>
+    </div>
+  );
+}
+
+// A round disc facing along x, centred at (x, yc, zc). Stacked, they make a cylinder.
+function Disc({ x, yc, zc, r, color }) {
+  return (
+    <i
+      className="disc"
+      style={{
+        left: u(x - r),
+        top: u(yc - r),
+        width: u(2 * r),
+        height: u(2 * r),
+        background: color,
+        transform: `translateZ(${u(zc)}) rotateY(90deg)`,
+      }}
+    />
+  );
+}
+
+const range = (n) => Array.from({ length: n }, (_, i) => i);
+
+function Camcorder3D() {
+  const grey = "#9a9d9b";
+  const dark = "#25272a";
+  return (
+    <div className="cam3d-model">
+      {/* base plate in the owner's colour */}
+      <Box x={-1.2} y={-1} z={0} w={24.4} d={9} h={1} color="var(--owner)" />
+      {/* body, with the tape door and the owner's stripe on the side */}
+      <Box
+        x={6}
+        y={0}
+        z={1}
+        w={12}
+        d={7}
+        h={7}
+        color={grey}
+        top="#b9bcba"
+        south={
+          <>
+            <span className="cam-tape" />
+            <span className="cam-stripe" />
+          </>
+        }
+      />
+      {/* lens barrel and fisheye hood */}
+      {range(6).map((k) => (
+        <Disc key={`b${k}`} x={1.6 + k * 0.75} yc={3.5} zc={4.5} r={2.4} color={k % 2 ? "#3b3e42" : dark} />
+      ))}
+      <Disc x={5.6} yc={3.5} zc={4.5} r={2.7} color="#c3c6c8" />
+      {range(4).map((k) => (
+        <Disc key={`h${k}`} x={k * 0.55} yc={3.5} zc={4.5} r={3.7} color="#101112" />
+      ))}
+      {/* handle with posts, and the mic on top */}
+      <Box x={4.5} y={2.8} z={8} w={1.4} d={1.4} h={0.9} color={grey} />
+      <Box x={13} y={2.8} z={8} w={1.4} d={1.4} h={0.9} color={grey} />
+      <Box x={3.5} y={2.8} z={8.9} w={11} d={1.4} h={0.9} color={grey} top="#b9bcba" />
+      <Box x={0.6} y={2.4} z={9.2} w={5} d={2.2} h={2.2} color={dark} top="#3b3e42" />
+      {/* viewfinder and eyecup at the back */}
+      <Box x={16.5} y={0.5} z={5.4} w={5.5} d={3} h={2.8} color="#1f2122" top="#33363a" />
+      <Box x={21.8} y={0.2} z={5.1} w={1.2} d={3.6} h={3.4} color="#111" />
+    </div>
   );
 }
 
@@ -306,22 +391,20 @@ export default function Board() {
             </div>
           </div>
 
-          {/* A camcorder stands on every owned space, in the owner's colour */}
+          {/* A 3D camcorder piece stands on every owned space, in the owner's colour */}
           {boardSpaces.map((space, i) => {
             const owner = ownerOf(game, i);
             if (owner < 0) return null;
-            const { x, y } = cellCenter(i);
+            const { x, y } = cellTopEdge(i);
             return (
               <div
                 key={`cam-${i}`}
-                className="piece-anchor camera-anchor"
-                style={{ left: `${x * 100}%`, top: `${(y - 0.012) * 100}%` }}
+                className={`cam3d p${owner}`}
+                style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
                 role="img"
                 aria-label={`${space.name}: filmer hired by ${PLAYER_NAMES[owner]}`}
               >
-                <div className={`camera-body p${owner}`}>
-                  <Camcorder />
-                </div>
+                <Camcorder3D />
               </div>
             );
           })}

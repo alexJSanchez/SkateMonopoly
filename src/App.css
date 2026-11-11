@@ -576,50 +576,6 @@ body {
   width: auto;
 }
 
-/* ---------- owned-space camcorders ---------- */
-.camera-anchor {
-  z-index: 2;
-}
-.camera-anchor::after {
-  width: calc(var(--board-size) / 34);
-  height: calc(var(--board-size) / 70);
-  left: calc(var(--board-size) / -68);
-  top: calc(var(--board-size) / -140);
-}
-.camera-body {
-  position: absolute;
-  left: calc(var(--board-size) / -52);
-  bottom: 0;
-  width: calc(var(--board-size) / 26);
-  height: calc(var(--board-size) / 35);
-  transform-origin: 50% 100%;
-  transform: rotateZ(-45deg) rotateX(-55deg);
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
-}
-.camera-body svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  animation: cam-pop 0.4s ease-out;
-  transform-origin: 50% 100%;
-}
-.camera-body.p0 {
-  color: #2b6cb0;
-}
-.camera-body.p1 {
-  color: #c53030;
-}
-@keyframes cam-pop {
-  from {
-    transform: scale(0) translateY(-30px);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
-
 /* ---------- one-screen layout: sidebar left, scene right ---------- */
 #root {
   width: 100%;
@@ -1235,4 +1191,96 @@ body {
   100% {
     transform: none;
   }
+}
+
+
+/* ---------- 3D camcorder piece (VX1000-style) on owned spaces ---------- */
+.cam3d {
+  --u: calc(var(--board-size) / 335); /* one model unit */
+  position: absolute;
+  width: calc(var(--u) * 22);
+  height: calc(var(--u) * 7);
+  transform: translate(-50%, -50%); /* centre the footprint on its point */
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+.cam3d.p0 { --owner: #2b6cb0; }
+.cam3d.p1 { --owner: #c53030; }
+.cam3d-model {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: cam3d-drop 0.45s ease-out;
+}
+@keyframes cam3d-drop {
+  from { transform: translateZ(calc(var(--u) * 30)) scale(0.4); }
+  to { transform: none; }
+}
+
+/* a box is its top face plus four sides, shaded from --c */
+.box,
+.box i,
+.disc {
+  position: absolute;
+  display: block;
+  transform-style: preserve-3d;
+}
+.box .f-top {
+  left: 0;
+  top: 0;
+  width: var(--w);
+  height: var(--d);
+  background: var(--ct);
+  transform: translateZ(var(--h));
+}
+.box .f-s,
+.box .f-n {
+  left: 0;
+  width: var(--w);
+  height: var(--h);
+  transform-origin: 0 0;
+  transform: rotateX(90deg);
+}
+.box .f-s { top: var(--d); background: color-mix(in srgb, var(--c) 82%, black); }
+.box .f-n { top: 0; background: color-mix(in srgb, var(--c) 60%, black); }
+.box .f-e,
+.box .f-w {
+  top: 0;
+  width: var(--d);
+  height: var(--h);
+  transform-origin: 0 0;
+  transform: rotateZ(90deg) rotateX(90deg);
+}
+.box .f-e { left: var(--w); background: color-mix(in srgb, var(--c) 66%, black); }
+.box .f-w { left: 0; background: color-mix(in srgb, var(--c) 66%, black); }
+.disc { border-radius: 50%; }
+
+/* details on the camera's side: tape door with a label, and the owner's stripe */
+.cam-tape {
+  position: absolute;
+  left: 38%;
+  top: 16%;
+  width: 38%;
+  height: 46%;
+  background: #34373a;
+  border-radius: 8%;
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.3) #6b6e6c;
+}
+.cam-tape::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  top: 22%;
+  width: 45%;
+  height: 50%;
+  background: #e8dcb0;
+  transform: rotate(-8deg);
+}
+.cam-stripe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8%;
+  height: 16%;
+  background: var(--owner);
 }

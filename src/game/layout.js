@@ -12,21 +12,21 @@ const trackCenter = (k) => {
 
 // Space 0 is the top-left corner; the path runs right along the top, down the
 // right side, left along the bottom and up the left side.
+function cellTrack(index) {
+  if (index <= 10) return { col: index, row: 0 };
+  if (index <= 20) return { col: 10, row: index - 10 };
+  if (index <= 30) return { col: 10 - (index - 20), row: 10 };
+  return { col: 0, row: 10 - (index - 30) };
+}
+
 export function cellCenter(index) {
-  let col;
-  let row;
-  if (index <= 10) {
-    col = index;
-    row = 0;
-  } else if (index <= 20) {
-    col = 10;
-    row = index - 10;
-  } else if (index <= 30) {
-    col = 10 - (index - 20);
-    row = 10;
-  } else {
-    col = 0;
-    row = 10 - (index - 30);
-  }
+  const { col, row } = cellTrack(index);
   return { x: trackCenter(col), y: trackCenter(row) };
+}
+
+// Just inside the top edge of a space (over its coloured band), centred.
+export function cellTopEdge(index) {
+  const { col, row } = cellTrack(index);
+  const rowSize = row === 0 || row === 10 ? CORNER : 1;
+  return { x: trackCenter(col), y: trackCenter(row) - rowSize / 2 / TOTAL + 0.012 };
 }

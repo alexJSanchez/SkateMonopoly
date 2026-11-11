@@ -50,7 +50,7 @@ const boardSpaces = [
   { name: "Red Ribbon China", type: "property", price: 200, group: "china" },
 
   // ===== Corner: Free Parking (space 20) =====
-  { name: "Free Parking", type: "corner", corner: "free-parking" },
+  { name: "Street Session", type: "corner", corner: "free-parking" },
 
   // ===== Bottom row: right to left (spaces 21-29) =====
   {

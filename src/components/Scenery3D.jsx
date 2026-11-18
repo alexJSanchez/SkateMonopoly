@@ -2,12 +2,13 @@
 // Location scenery. Each board space has a theme (src/game/locationThemes.js);
 // this turns a theme into ground, back walls, props, sky and light. Everything
 // is procedural (canvas textures + primitives), seeded, Lambert-shaded.
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { MOODS } from "../game/locationThemes";
 import { SIZE } from "./layout3d";
-import { Box, Cyl, GROUND_Y, Lam, canvasTexture, rngFor } from "./Skate3DEnv";
+import { Box, Cyl, GROUND_Y, Lam, TrickLoop, canvasTexture, rngFor } from "./Skate3DEnv";
+import { BounceGroup, OUT_S, PopCtx, PopGroup, STAGGER, nowS } from "./pop";
 import { HULL, OutlineCtx, PAL, SKY_BY_MOOD, lam, paintGradients, snap } from "./paint";
 
 const IMPACT = "Impact, 'Arial Narrow Bold', 'Arial Black', sans-serif";
@@ -992,7 +993,7 @@ const MIRRORED = new Set([
   "marble", "stall", "megaramp",
 ]);
 
-function Prop({ spec, mirror = false }) {
+function Prop({ spec, mirror = false, index = 0 }) {
   const { kind, text, slot } = parseProp(spec);
   const [sx, sz] = SLOTS[slot] ?? [0, -14];
   const [x, z] = mirror ? [-sx, -sz] : [sx, sz];
@@ -1000,7 +1001,7 @@ function Prop({ spec, mirror = false }) {
   if (!Build) return null;
   return (
     <group position={[x, GROUND_Y, z]} rotation={[0, Math.atan2(-x, -z), 0]}>
-      {kind === "neon" ? <Build text={text} color={neonColor(text)} /> : <Build />}
+      <PopGroup index={index}>{kind === "neon" ? <Build text={text} color={neonColor(text)} /> : <Build />}</PopGroup>
     </group>
   );
 }
@@ -1040,7 +1041,23 @@ function FloatingBase({ ground }) {
 
 // ---- the scene --------------------------------------------------------------
 // `index` is the board space this setting is for (it seeds the textures).
-export function LocationScene({ theme, index }) {
+export function LocationScene({ theme: target, index: targetIndex }) {
+  // What is built right now. When the target changes, the old items sink into the
+  // ground first; once they are gone the new setting is built and pops out.
+  const [live, setLive] = useState({ theme: target, index: targetIndex });
+  const tr = useRef({ mode: "idle", t0: 0 });
+  useEffect(() => {
+    if (target === live.theme) return undefined;
+    tr.current = { mode: "out", t0: nowS() };
+    const wait = (OUT_S + STAGGER * 12 + 0.05) * 1000;
+    const id = setTimeout(() => {
+      setLive({ theme: target, index: targetIndex });
+      tr.current = { mode: "in", t0: nowS() };
+    }, wait);
+    return () => clearTimeout(id);
+  }, [target, targetIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  const theme = live.theme;
+  const index = live.index;
   const ground = useMemo(() => groundTexture(theme.ground), [theme]);
   const walls = useMemo(() => [wallTexture(theme.wall, index * 2 + 11), wallTexture(theme.wall, index * 2 + 12)], [theme, index]);
   useEffect(
@@ -1054,9 +1071,14 @@ export function LocationScene({ theme, index }) {
   const y = GROUND_Y + WALL_H / 2;
   const capColor = theme.wall.kind === "hedge" ? "#5d7f52" : PAL.street;
   return (
-    <>
-      <FloatingBase ground={ground} />
-      {/* wall on the far -x side, facing +x */}
+    <PopCtx.Provider value={tr}>
+      <BounceGroup>
+        <FloatingBase ground={ground} />
+      </BounceGroup>
+      {/* wall on the far -x side, facing +x (rises out of the ground) */}
+      <group position={[0, GROUND_Y, 0]}>
+        <PopGroup index={1}>
+          <group position={[0, -GROUND_Y, 0]}>
       <group position={[-WALL_OFF, 0, 0]}>
         <Box pos={[0, y, 0]} size={[0.5, WALL_H, L]} color={PAL.under} cast={false} />
         <mesh position={[0.26, y, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
@@ -1065,7 +1087,13 @@ export function LocationScene({ theme, index }) {
         </mesh>
         <Box pos={[0, GROUND_Y + WALL_H + 0.12, 0]} size={[0.8, 0.25, L + 0.3]} color={capColor} cast={false} />
       </group>
+          </group>
+        </PopGroup>
+      </group>
       {/* wall on the far -z side, facing +z */}
+      <group position={[0, GROUND_Y, 0]}>
+        <PopGroup index={2}>
+          <group position={[0, -GROUND_Y, 0]}>
       <group position={[0, 0, -WALL_OFF]}>
         <Box pos={[0, y, 0]} size={[L, WALL_H, 0.5]} color={PAL.under} cast={false} />
         <mesh position={[0, y, 0.26]} receiveShadow>
@@ -1074,20 +1102,26 @@ export function LocationScene({ theme, index }) {
         </mesh>
         <Box pos={[0, GROUND_Y + WALL_H + 0.12, 0]} size={[L + 0.3, 0.25, 0.8]} color={capColor} cast={false} />
       </group>
-      {theme.props.map((spec) => (
-        <Prop key={spec} spec={spec} />
+          </group>
+        </PopGroup>
+      </group>
+      {theme.props.map((spec, i) => (
+        <Prop key={spec} spec={spec} index={3 + i} />
       ))}
       {theme.props
         .filter((spec) => MIRRORED.has(parseProp(spec).kind) && !theme.trick)
-        .map((spec) => (
-          <Prop key={`m${spec}`} spec={spec} mirror />
+        .map((spec, i) => (
+          <Prop key={`m${spec}`} spec={spec} mirror index={3 + theme.props.length + i} />
         ))}
       {theme.lamp && !theme.props.some((p) => p.startsWith("lamp@")) && (
         <group position={[-14.4, GROUND_Y, -14.4]} rotation={[0, Math.PI / 4, 0]}>
-          <LampPost />
+          <PopGroup index={3}>
+            <LampPost />
+          </PopGroup>
         </group>
       )}
-    </>
+      {theme.trick && <TrickLoop />}
+    </PopCtx.Provider>
   );
 }
 

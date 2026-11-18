@@ -14,7 +14,7 @@ import { locationLines } from "../game/locationInfo";
 import { Camcorder, Die, Tape } from "./Models3D";
 import { Flag, Skater } from "./Skater3D";
 import { SIZE, TILE_H, headingFor, spaceRect, tileHeight, track } from "./layout3d";
-import { CenterMat, CenterProps, Slab, TrickLoop, concreteTexture } from "./Skate3DEnv";
+import { CenterMat, CenterProps, Slab, concreteTexture } from "./Skate3DEnv";
 import { Atmosphere, LocationScene } from "./Scenery3D";
 import { LOCATION_THEMES } from "../game/locationThemes";
 import { HULL, OutlineCtx, PAL, PLAYER_PAL, snap } from "./paint";
@@ -329,7 +329,6 @@ function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selec
       <Atmosphere theme={theme} />
       <Slab />
       <LocationScene theme={theme} index={sceneSpace} />
-      {theme.trick && <TrickLoop />}
       <CenterMat />
       <CenterProps />
 
@@ -480,8 +479,7 @@ export default function Board3D() {
         />
       </Canvas>
 
-      {/* a camera flash cuts between locations, and a lower-third caption names the spot */}
-      {cut > 0 && <div key={`cut${cut}`} className="cam-flash" aria-hidden="true" />}
+      {/* the new location is named in a lower-third caption (the scene itself pops in) */}
       <div key={`cap${cut}`} className="vhs-caption" aria-live="polite">
         <strong>{theme.name}</strong>
         <span>{theme.sub}</span>

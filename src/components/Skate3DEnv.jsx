@@ -11,6 +11,7 @@ import { SIZE, UNIT } from "./layout3d";
 import { Skater } from "./Skater3D";
 import { Camcorder } from "./Models3D";
 import { HULL, OutlineCtx, PAL, lam, outlineFor, snap } from "./paint";
+import { PopGroup } from "./pop";
 
 export const GROUND_Y = -0.6;
 // Palette stand-ins for the colours this scene used to hard-code.
@@ -440,6 +441,7 @@ export function TrickLoop() {
   });
   return (
     <group position={[-1.5, GROUND_Y, SIZE / 2 + 3.6]}>
+      <PopGroup index={4}>
       <group ref={ramp}>
         <mesh geometry={geom} material={lam(PAL.ply)} castShadow receiveShadow />
         {outlines && <mesh geometry={geom} material={HULL} scale={[1.05, 1.04, 1.07]} />}
@@ -469,6 +471,7 @@ export function TrickLoop() {
           <meshBasicMaterial color="#ff2a1a" />
         </mesh>
       </group>
+      </PopGroup>
     </group>
   );
 }

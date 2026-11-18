@@ -196,10 +196,10 @@ function Piece({ index, space, active, offset }) {
 }
 
 // Eases the orbit target to whichever piece the camera should follow.
-// Phone-style gestures: one finger drags the board around, two fingers pinch
-// to zoom and twist to rotate. (Mouse: left-drag pans, right-drag rotates,
-// wheel zooms.) Touching the view stops the auto-follow; the recenter button
-// or the next roll hands control back.
+// Phone-style gestures: one finger orbits the view, two fingers drag to move
+// around the board and pinch to zoom. (Mouse: left-drag orbits, right-drag
+// pans, wheel zooms.) Touching the view stops the auto-follow; the recenter
+// button or the next roll hands control back.
 const PAN_LIMIT = SIZE * 0.7;
 function Follow({ point, following, onUserMove }) {
   const controls = useRef();
@@ -226,8 +226,8 @@ function Follow({ point, following, onUserMove }) {
       enableDamping
       dampingFactor={0.12}
       onStart={onUserMove}
-      mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
-      touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
+      mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
+      touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
       minDistance={6}
       maxDistance={45}
       maxPolarAngle={Math.PI / 2.2}

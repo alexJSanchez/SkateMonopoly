@@ -311,7 +311,7 @@ function modelPlacement(index) {
   return { pos: [x - w / 2 + inset, y, z], rotY: Math.PI / 2, flag: [x + w / 2 - 0.14, TILE_H, z] };
 }
 
-function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selectedSpace, onSelect, sceneSpace, outlines, toon }) {
+function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selectedSpace, onSelect, sceneSpace, outlines, lookName }) {
   const theme = LOCATION_THEMES[sceneSpace];
   const colors = PLAYER_COLORS;
   const point = useMemo(() => {
@@ -326,7 +326,7 @@ function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selec
   }, [shown, roller]);
   return (
     <OutlineCtx.Provider value={outlines}>
-      <ToonPass on={toon} />
+      <ToonPass mode={lookName} />
       {/* sky, light and surroundings change with the location the skater is at */}
       <Atmosphere theme={theme} />
       <Slab />
@@ -391,9 +391,12 @@ export default function Board3D() {
   const [outlines, setOutlines] = useState(true);
   const [squint, setSquint] = useState(false);
   const [vhs, setVhs] = useState(false);
-  // Look: painted, or cel-shaded (toon bands + bolder ink). ?style=toon opens it directly.
-  const [toon, setToon] = useState(() => new URLSearchParams(window.location.search).get("style") === "toon");
-  setLook(toon); // read by the scene while it renders
+  // Look: painted, cel-shaded (toon bands + bolder ink) or comic. ?style=toon / ?style=comic opens one directly.
+  const [lookName, setLookName] = useState(() => {
+    const q = new URLSearchParams(window.location.search).get("style");
+    return q === "toon" || q === "comic" ? q : "painted";
+  });
+  setLook(lookName); // read by the scene while it renders
   const colors = PLAYER_COLORS;
   const holdTimer = useRef(null);
   useEffect(() => () => clearTimeout(holdTimer.current), []);
@@ -465,7 +468,7 @@ export default function Board3D() {
   const targets = phase === "skate_pick" ? skateTargets(game, turn) : [];
 
   return (
-    <div className={`three-root painted${squint ? " squint" : ""}`}>
+    <div className={`three-root painted${lookName === "comic" ? " comic" : ""}${squint ? " squint" : ""}`}>
       <Canvas
         shadows
         flat
@@ -486,10 +489,22 @@ export default function Board3D() {
           onUserMove={() => setFollowing(false)}
           sceneSpace={sceneSpace}
           outlines={outlines}
-          toon={toon}
+          lookName={lookName}
         />
       </Canvas>
 
+      {/* comic page: a halftone screen over the picture, a ruled panel border, and a POP! when a place starts popping in */}
+      {lookName === "comic" && (
+        <>
+          <div className="comic-halftone" aria-hidden="true" />
+          <div className="comic-frame" aria-hidden="true" />
+          {cut > 0 && (
+            <div key={`pop${cut}`} className="comic-burst" aria-hidden="true">
+              <span>POP!</span>
+            </div>
+          )}
+        </>
+      )}
       {/* the new location is named in a lower-third caption (the scene itself pops in) */}
       <div key={`cap${cut}`} className="vhs-caption" aria-live="polite">
         <strong>{theme.name}</strong>
@@ -506,9 +521,10 @@ export default function Board3D() {
         </div>
       )}
       <div className="art-controls">
-        <select value={toon ? "toon" : "painted"} onChange={(e) => setToon(e.target.value === "toon")} aria-label="Look">
+        <select value={lookName} onChange={(e) => setLookName(e.target.value)} aria-label="Look">
           <option value="painted">Painted</option>
           <option value="toon">Cel-shaded</option>
+          <option value="comic">Comic</option>
         </select>
         <label>
           <input type="checkbox" checked={outlines} onChange={(e) => setOutlines(e.target.checked)} /> Outlines

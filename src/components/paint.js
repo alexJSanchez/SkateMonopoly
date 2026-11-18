@@ -78,24 +78,30 @@ export function lam(color) {
 export const HULL = new THREE.MeshBasicMaterial({ color: PAL.outline, side: THREE.BackSide });
 export const OutlineCtx = createContext(true);
 
-// Which look is on: the painted one, or cel-shaded (banded toon lighting with
-// bolder, inkier outlines). Components read this while they render.
-export const look = { toon: false };
-export function setLook(toon) {
-  look.toon = toon;
-  HULL.color.set(toon ? "#17101c" : PAL.outline);
+// Which look is on: "painted", "toon" (cel-shaded: banded lighting, bolder ink) or
+// "comic" (toon plus flat posterized colour, halftone shading, rim light and the
+// boldest ink). Components read this while they render.
+export const look = { mode: "painted", toon: false, comic: false };
+export function setLook(mode) {
+  look.mode = mode;
+  look.toon = mode !== "painted";
+  look.comic = mode === "comic";
+  HULL.color.set(look.toon ? "#17101c" : PAL.outline);
 }
 
 // Outline thickness by size (world units): thick on slabs and walls, thin on
-// mid-size props, none on small props. The cel-shaded look draws every outline
-// bolder and gives even small props a thin one, like ink on a comic panel.
+// mid-size props, none on small props. The inked looks draw every outline
+// bolder and give even small props a thin one, like ink on a comic panel.
 export function outlineFor(maxDim) {
   let t = 0;
   if (maxDim >= 8) t = 0.13;
   else if (maxDim >= 3) t = 0.085;
   else if (maxDim >= 1.2) t = 0.05;
   else if (maxDim >= 0.75) t = 0.03;
-  if (look.toon) return t > 0 ? t * 1.5 : maxDim >= 0.4 ? 0.02 : 0;
+  if (look.toon) {
+    const k = look.comic ? 2 : 1.5;
+    return t > 0 ? t * k : maxDim >= 0.4 ? (look.comic ? 0.03 : 0.02) : 0;
+  }
   return t;
 }
 

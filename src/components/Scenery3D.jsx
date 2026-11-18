@@ -6,7 +6,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { MOODS } from "../game/locationThemes";
-import { SIZE } from "./layout3d";
+import { SIZE, TILE_H, outerEdgePoint, spaceRect } from "./layout3d";
 import { Box, Cyl, GROUND_Y, Lam, TrickLoop, canvasTexture, rngFor } from "./Skate3DEnv";
 import { BounceGroup, OUT_S, PopCtx, PopGroup, STAGGER, nowS } from "./pop";
 import { HULL, OutlineCtx, PAL, SKY_BY_MOOD, lam, paintGradients, snap } from "./paint";
@@ -1006,6 +1006,78 @@ function Prop({ spec, mirror = false, index = 0 }) {
   );
 }
 
+// ---- the location flag: a pole beside the skater's tile with the place name -----------
+function flagTexture(name, sub) {
+  return canvasTexture(512, 208, (ctx, w, h) => {
+    ctx.fillStyle = PAL.cream;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = PAL.terracotta;
+    ctx.fillRect(0, 0, w, 16);
+    ctx.fillRect(0, h - 16, w, 16);
+    ctx.strokeStyle = PAL.outline;
+    ctx.lineWidth = 8;
+    ctx.strokeRect(4, 4, w - 8, h - 8);
+    ctx.fillStyle = PAL.ink;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    // wrap the name onto at most two lines
+    ctx.font = `bold 66px "Arial Narrow", Impact, "Arial Black", sans-serif`;
+    const words = name.split(" ");
+    const lines = [];
+    let line = "";
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(next).width > w - 60) {
+        lines.push(line);
+        line = word;
+      } else line = next;
+    }
+    lines.push(line);
+    const top = sub ? 82 : 104;
+    lines.slice(0, 2).forEach((l, i, all) => ctx.fillText(l, w / 2, top + (i - (all.length - 1) / 2) * 64));
+    if (sub) {
+      ctx.font = `bold 32px "Trebuchet MS", sans-serif`;
+      ctx.fillStyle = PAL.brick;
+      ctx.fillText(sub, w / 2, h - 44);
+    }
+  });
+}
+
+const RIGHT = new THREE.Vector3(1, 0, -1).normalize(); // screen-right along the ground
+
+function LocationFlag({ index, theme }) {
+  const tex = useMemo(() => flagTexture(theme.name, theme.sub), [theme]);
+  useEffect(() => () => tex.dispose(), [tex]);
+  const cloth = useRef();
+  // beside the skater's tile, not on top of an owner's flag at its centre
+  const rect = spaceRect(index);
+  const [x, z] = outerEdgePoint(index, -0.32 * (rect.row === 0 || rect.row === 10 ? rect.w : rect.d));
+  useFrame((s) => {
+    if (cloth.current) cloth.current.rotation.y = Math.PI / 4 + Math.sin(s.clock.elapsedTime * 2.2) * 0.07;
+  });
+  const H = 3.7;
+  return (
+    <group position={[x, TILE_H, z]}>
+      <PopGroup index={5}>
+        <Cyl pos={[0, H / 2, 0]} r={0.09} h={H} color={PAL.ink} seg={8} t={0.03} />
+        <mesh position={[0, H + 0.08, 0]} castShadow>
+          <sphereGeometry args={[0.13, 10, 8]} />
+          <meshLambertMaterial color={snap(PAL.tan)} />
+        </mesh>
+        {/* the banner hangs from the pole, reaching out to screen-right */}
+        <group position={[RIGHT.x * 0.07, H - 0.78, RIGHT.z * 0.07]}>
+          <group ref={cloth} position={[RIGHT.x * 1.55, 0, RIGHT.z * 1.55]} rotation={[0, Math.PI / 4, 0]}>
+            <mesh castShadow>
+              <planeGeometry args={[3.1, 1.26]} />
+              <meshLambertMaterial map={tex} side={THREE.DoubleSide} />
+            </mesh>
+          </group>
+        </group>
+      </PopGroup>
+    </group>
+  );
+}
+
 // ---- the floating chunk the whole street spot sits on -------------------------------
 // A thick slab whose top carries the location's ground, over a darker underside
 // block, both outlined: the diorama floats in the sky like a chunk of city.
@@ -1121,6 +1193,7 @@ export function LocationScene({ theme: target, index: targetIndex }) {
         </group>
       )}
       {theme.trick && <TrickLoop />}
+      <LocationFlag index={index} theme={theme} />
     </PopCtx.Provider>
   );
 }

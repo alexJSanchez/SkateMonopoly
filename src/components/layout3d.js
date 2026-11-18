@@ -39,3 +39,13 @@ export function headingFor(index) {
   const side = Math.floor((index % 40) / 10);
   return [0, -Math.PI / 2, Math.PI, Math.PI / 2][side];
 }
+
+// A point just beyond a tile's outer edge (on the slab's margin), shifted
+// `along` the edge from the tile's centre. The "location" flagpole stands here.
+export function outerEdgePoint(index, along = 0, out = 0.4) {
+  const { x, z, w, d, row, col } = spaceRect(index);
+  if (row === 0) return [x + along, z - d / 2 - out];
+  if (row === 10) return [x + along, z + d / 2 + out];
+  if (col === 0) return [x - w / 2 - out, z + along];
+  return [x + w / 2 + out, z + along];
+}

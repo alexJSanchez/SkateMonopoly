@@ -9,7 +9,7 @@ import { MOODS } from "../game/locationThemes";
 import { SIZE, TILE_H, outerEdgePoint, spaceRect } from "./layout3d";
 import { Box, Cyl, GROUND_Y, Lam, TrickLoop, canvasTexture, rngFor } from "./Skate3DEnv";
 import { BounceGroup, OUT_S, PopCtx, PopGroup, STAGGER, nowS } from "./pop";
-import { HULL, OutlineCtx, PAL, SKY_BY_MOOD, lam, paintGradients, snap } from "./paint";
+import { HULL, OutlineCtx, PAL, SKY_BY_MOOD, lam, look, paintGradients, snap } from "./paint";
 
 const IMPACT = "Impact, 'Arial Narrow Bold', 'Arial Black', sans-serif";
 const CJK = "'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif";
@@ -1219,9 +1219,11 @@ export function Atmosphere({ theme }) {
     const k = Math.min(1, dt * 3);
     scene.background.lerp(tmp.set(sky), k);
     if (hemi.current) hemi.current.color.lerp(hemiColor, k);
+    // cel-shaded: less flat fill, a stronger key, so the light bands are clear
+    if (hemi.current) hemi.current.intensity += ((look.toon ? 0.95 : 2.5) - hemi.current.intensity) * k;
     if (key.current) {
       key.current.color.lerp(keyColor, k);
-      key.current.intensity += (2.7 + mood.key[1] * 0.18 - key.current.intensity) * k;
+      key.current.intensity += ((2.7 + mood.key[1] * 0.18) * (look.toon ? 1.45 : 1) - key.current.intensity) * k;
     }
   });
 

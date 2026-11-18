@@ -17,7 +17,8 @@ import { SIZE, TILE_H, headingFor, spaceRect, tileHeight, track } from "./layout
 import { CenterMat, CenterProps, Slab, concreteTexture } from "./Skate3DEnv";
 import { Atmosphere, LocationScene } from "./Scenery3D";
 import { LOCATION_THEMES } from "../game/locationThemes";
-import { HULL, OutlineCtx, PAL, PLAYER_PAL, snap } from "./paint";
+import { HULL, OutlineCtx, PAL, PLAYER_PAL, setLook, snap } from "./paint";
+import { ToonPass } from "./toon";
 
 const STEP_MS = 220;
 const MAX_WALK = 12;
@@ -310,7 +311,7 @@ function modelPlacement(index) {
   return { pos: [x - w / 2 + inset, y, z], rotY: Math.PI / 2, flag: [x + w / 2 - 0.14, TILE_H, z] };
 }
 
-function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selectedSpace, onSelect, sceneSpace, outlines }) {
+function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selectedSpace, onSelect, sceneSpace, outlines, toon }) {
   const theme = LOCATION_THEMES[sceneSpace];
   const colors = PLAYER_COLORS;
   const point = useMemo(() => {
@@ -325,6 +326,7 @@ function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selec
   }, [shown, roller]);
   return (
     <OutlineCtx.Provider value={outlines}>
+      <ToonPass on={toon} />
       {/* sky, light and surroundings change with the location the skater is at */}
       <Atmosphere theme={theme} />
       <Slab />
@@ -389,6 +391,9 @@ export default function Board3D() {
   const [outlines, setOutlines] = useState(true);
   const [squint, setSquint] = useState(false);
   const [vhs, setVhs] = useState(false);
+  // Look: painted, or cel-shaded (toon bands + bolder ink). ?style=toon opens it directly.
+  const [toon, setToon] = useState(() => new URLSearchParams(window.location.search).get("style") === "toon");
+  setLook(toon); // read by the scene while it renders
   const colors = PLAYER_COLORS;
   const holdTimer = useRef(null);
   useEffect(() => () => clearTimeout(holdTimer.current), []);
@@ -481,6 +486,7 @@ export default function Board3D() {
           onUserMove={() => setFollowing(false)}
           sceneSpace={sceneSpace}
           outlines={outlines}
+          toon={toon}
         />
       </Canvas>
 
@@ -500,6 +506,10 @@ export default function Board3D() {
         </div>
       )}
       <div className="art-controls">
+        <select value={toon ? "toon" : "painted"} onChange={(e) => setToon(e.target.value === "toon")} aria-label="Look">
+          <option value="painted">Painted</option>
+          <option value="toon">Cel-shaded</option>
+        </select>
         <label>
           <input type="checkbox" checked={outlines} onChange={(e) => setOutlines(e.target.checked)} /> Outlines
         </label>

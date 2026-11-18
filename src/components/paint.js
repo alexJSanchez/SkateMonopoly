@@ -78,14 +78,25 @@ export function lam(color) {
 export const HULL = new THREE.MeshBasicMaterial({ color: PAL.outline, side: THREE.BackSide });
 export const OutlineCtx = createContext(true);
 
+// Which look is on: the painted one, or cel-shaded (banded toon lighting with
+// bolder, inkier outlines). Components read this while they render.
+export const look = { toon: false };
+export function setLook(toon) {
+  look.toon = toon;
+  HULL.color.set(toon ? "#17101c" : PAL.outline);
+}
+
 // Outline thickness by size (world units): thick on slabs and walls, thin on
-// mid-size props, none on small props.
+// mid-size props, none on small props. The cel-shaded look draws every outline
+// bolder and gives even small props a thin one, like ink on a comic panel.
 export function outlineFor(maxDim) {
-  if (maxDim >= 8) return 0.13;
-  if (maxDim >= 3) return 0.085;
-  if (maxDim >= 1.2) return 0.05;
-  if (maxDim >= 0.75) return 0.03;
-  return 0;
+  let t = 0;
+  if (maxDim >= 8) t = 0.13;
+  else if (maxDim >= 3) t = 0.085;
+  else if (maxDim >= 1.2) t = 0.05;
+  else if (maxDim >= 0.75) t = 0.03;
+  if (look.toon) return t > 0 ? t * 1.5 : maxDim >= 0.4 ? 0.02 : 0;
+  return t;
 }
 
 // Painted finish for a vertical surface: a soft top light, grime toward the

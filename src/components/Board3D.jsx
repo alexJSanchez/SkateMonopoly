@@ -429,22 +429,27 @@ export default function Board3D() {
   const mover = useRef(0);
   const wasBusy = useRef(false);
   if (movingIdx >= 0) mover.current = movingIdx;
-  // The setting switches to wherever the skater lands, with a VHS "cut".
+  // The landing card appears once the skater has stopped.
+  useEffect(() => {
+    if (wasBusy.current && !busy) setLanded({ player: mover.current, space: shown[mover.current] });
+    wasBusy.current = busy;
+  }, [busy, shown]);
+
+  // The setting changes while the skater is on the move: as soon as they start
+  // travelling towards a new space its place begins to pop in, so it is ready
+  // (or nearly) by the time they arrive.
   const [sceneSpace, setSceneSpace] = useState(0);
   const [cut, setCut] = useState(0);
   const sceneRef = useRef(0);
   useEffect(() => {
-    if (wasBusy.current && !busy) {
-      const space = shown[mover.current];
-      setLanded({ player: mover.current, space });
-      if (LOCATION_THEMES[space] !== LOCATION_THEMES[sceneRef.current]) {
-        sceneRef.current = space;
-        setSceneSpace(space);
-        setCut((c) => c + 1);
-      }
+    if (holding || movingIdx < 0) return;
+    const destination = players[movingIdx].space;
+    if (LOCATION_THEMES[destination] !== LOCATION_THEMES[sceneRef.current]) {
+      sceneRef.current = destination;
+      setSceneSpace(destination);
+      setCut((c) => c + 1);
     }
-    wasBusy.current = busy;
-  }, [busy, shown]);
+  }, [holding, movingIdx, players]);
   const theme = LOCATION_THEMES[sceneSpace];
   // Clicking a tile opens its property card; otherwise the card shows where the last piece landed.
   const [inspect, setInspect] = useState(null);

@@ -14,16 +14,9 @@ import { locationLines } from "../game/locationInfo";
 import { Camcorder, Die, Tape } from "./Models3D";
 import { Flag, Skater } from "./Skater3D";
 import { SIZE, TILE_H, headingFor, spaceRect, tileHeight, track } from "./layout3d";
-import {
-  CenterMat,
-  CenterProps,
-  GroundAndSlab,
-  StreetLamp,
-  StreetProps,
-  TrickLoop,
-  Walls,
-  concreteTexture,
-} from "./Skate3DEnv";
+import { CenterMat, CenterProps, Slab, TrickLoop, concreteTexture } from "./Skate3DEnv";
+import { Atmosphere, LocationScene } from "./Scenery3D";
+import { LOCATION_THEMES } from "../game/locationThemes";
 
 const STEP_MS = 220;
 const MAX_WALK = 12;
@@ -309,7 +302,8 @@ function modelPlacement(index) {
   return { pos: [x - w / 2 + inset, y, z], rotY: Math.PI / 2, flag: [x + w / 2 - 0.14, TILE_H, z] };
 }
 
-function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selectedSpace, onSelect }) {
+function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selectedSpace, onSelect, sceneSpace }) {
+  const theme = LOCATION_THEMES[sceneSpace];
   const point = useMemo(() => {
     const r = spaceRect(shown[focus]);
     return { x: r.x, z: r.z };
@@ -322,30 +316,11 @@ function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selec
   }, [shown, roller]);
   return (
     <>
-      <color attach="background" args={["#3b3f47"]} />
-      {/* cool sky/dirty-ground fill, one warm key light, soft shadows */}
-      <hemisphereLight args={["#cfd6e6", "#5a5448", 2.2]} />
-      <directionalLight
-        position={[-14, 32, 18]}
-        color="#fff1d6"
-        intensity={2.8}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-22}
-        shadow-camera-right={22}
-        shadow-camera-top={22}
-        shadow-camera-bottom={-22}
-        shadow-camera-near={1}
-        shadow-camera-far={90}
-        shadow-bias={-0.0004}
-        shadow-normalBias={0.03}
-      />
-
-      <GroundAndSlab />
-      <Walls />
-      <StreetLamp />
-      <StreetProps />
-      <TrickLoop />
+      {/* sky, light and surroundings change with the location the skater is at */}
+      <Atmosphere theme={theme} />
+      <Slab />
+      <LocationScene theme={theme} index={sceneSpace} />
+      {theme.trick && <TrickLoop />}
       <CenterMat />
       <CenterProps />
 
@@ -440,10 +415,23 @@ export default function Board3D() {
   const mover = useRef(0);
   const wasBusy = useRef(false);
   if (movingIdx >= 0) mover.current = movingIdx;
+  // The setting switches to wherever the skater lands, with a VHS "cut".
+  const [sceneSpace, setSceneSpace] = useState(0);
+  const [cut, setCut] = useState(0);
+  const sceneRef = useRef(0);
   useEffect(() => {
-    if (wasBusy.current && !busy) setLanded({ player: mover.current, space: shown[mover.current] });
+    if (wasBusy.current && !busy) {
+      const space = shown[mover.current];
+      setLanded({ player: mover.current, space });
+      if (LOCATION_THEMES[space] !== LOCATION_THEMES[sceneRef.current]) {
+        sceneRef.current = space;
+        setSceneSpace(space);
+        setCut((c) => c + 1);
+      }
+    }
     wasBusy.current = busy;
   }, [busy, shown]);
+  const theme = LOCATION_THEMES[sceneSpace];
   // Clicking a tile opens its property card; otherwise the card shows where the last piece landed.
   const [inspect, setInspect] = useState(null);
   const cardSpace = inspect ?? (landed && !busy ? landed.space : null);
@@ -472,8 +460,16 @@ export default function Board3D() {
           rolling={holding}
           following={following}
           onUserMove={() => setFollowing(false)}
+          sceneSpace={sceneSpace}
         />
       </Canvas>
+
+      {/* VHS "cut" between locations, and the lower-third caption */}
+      {vhs && cut > 0 && <div key={`cut${cut}`} className="vhs-cut" aria-hidden="true" />}
+      <div key={`cap${cut}`} className="vhs-caption" aria-live="polite">
+        <strong>{theme.name}</strong>
+        <span>{theme.sub}</span>
+      </div>
 
       {/* VHS overlay: scanlines, vignette and the camcorder read-outs */}
       {vhs && (

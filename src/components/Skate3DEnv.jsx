@@ -16,7 +16,7 @@ const RED = "#D6402B";
 const IMPACT = "Impact, 'Arial Narrow Bold', 'Arial Black', sans-serif";
 
 // ---- tiny helpers -----------------------------------------------------------
-function rngFor(seed) {
+export function rngFor(seed) {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -26,7 +26,7 @@ function rngFor(seed) {
   };
 }
 
-function canvasTexture(w, h, draw, repeat) {
+export function canvasTexture(w, h, draw, repeat) {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -57,11 +57,11 @@ export function concreteTexture() {
   return concrete;
 }
 
-function Lam({ color, ...rest }) {
+export function Lam({ color, ...rest }) {
   return <meshLambertMaterial color={color} {...rest} />;
 }
 
-function Box({ pos, size, color, rot, cast = true }) {
+export function Box({ pos, size, color, rot, cast = true }) {
   return (
     <mesh position={pos} rotation={rot} castShadow={cast} receiveShadow>
       <boxGeometry args={size} />
@@ -70,7 +70,7 @@ function Box({ pos, size, color, rot, cast = true }) {
   );
 }
 
-function Cyl({ pos, r, h, color, seg = 12, rot, rTop }) {
+export function Cyl({ pos, r, h, color, seg = 12, rot, rTop }) {
   return (
     <mesh position={pos} rotation={rot} castShadow receiveShadow>
       <cylinderGeometry args={[rTop ?? r, r, h, seg]} />
@@ -79,48 +79,11 @@ function Cyl({ pos, r, h, color, seg = 12, rot, rTop }) {
   );
 }
 
-// ---- ground, slab, curb -----------------------------------------------------
-export function GroundAndSlab() {
-  const asphalt = useMemo(
-    () =>
-      canvasTexture(
-        512,
-        512,
-        (ctx, w, h) => {
-          const r = rngFor(11);
-          ctx.fillStyle = "#2B2A28";
-          ctx.fillRect(0, 0, w, h);
-          for (let i = 0; i < 9000; i++) {
-            const v = 30 + Math.floor(r() * 55);
-            ctx.fillStyle = `rgba(${v},${v},${v},${0.3 + r() * 0.5})`;
-            ctx.fillRect(r() * w, r() * h, 1 + r() * 1.5, 1 + r() * 1.5);
-          }
-          ctx.strokeStyle = "rgba(10,10,10,0.85)";
-          for (let k = 0; k < 7; k++) {
-            ctx.lineWidth = 1 + r() * 1.5;
-            ctx.beginPath();
-            let x = r() * w;
-            let y = r() * h;
-            ctx.moveTo(x, y);
-            for (let s = 0; s < 9; s++) {
-              x += (r() - 0.5) * 70;
-              y += (r() - 0.3) * 60;
-              ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-          }
-        },
-        10
-      ),
-    []
-  );
+// ---- the slab the board sits on, with its yellow curb -------------------------
+export function Slab() {
   const half = SIZE / 2 + 0.7;
   return (
     <>
-      <mesh position={[0, GROUND_Y, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[170, 170]} />
-        <meshLambertMaterial map={asphalt} />
-      </mesh>
       <Box pos={[0, -0.3, 0]} size={[SIZE + 1.4, 0.6, SIZE + 1.4]} color="#6a675f" />
       {/* yellow painted curb band around the slab's top edge */}
       {[
@@ -131,165 +94,6 @@ export function GroundAndSlab() {
       ].map(([pos, size], i) => (
         <Box key={i} pos={pos} size={size} color={YELLOW} cast={false} />
       ))}
-    </>
-  );
-}
-
-// ---- back walls with graffiti -----------------------------------------------
-const TAGS = ["SESSION", "KICKFLIP", "NO COMPLY", "TAPE 94", "RAD", "FILM IT"];
-const TAG_COLORS = [RED, YELLOW, "#3E7CB1", CREAM, "#7ad06b", "#e06fb0"];
-
-function wallTexture(seed) {
-  return canvasTexture(1450, 350, (ctx, w, h) => {
-    const r = rngFor(seed);
-    ctx.fillStyle = "#5b5750";
-    ctx.fillRect(0, 0, w, h);
-    // brick lines
-    ctx.strokeStyle = "rgba(20,18,16,0.55)";
-    ctx.lineWidth = 2;
-    for (let y = 0, row = 0; y < h; y += 22, row++) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-      for (let x = (row % 2) * 30; x < w; x += 60) {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x, y + 22);
-        ctx.stroke();
-      }
-    }
-    // spray blobs
-    for (let i = 0; i < 26; i++) {
-      ctx.fillStyle = TAG_COLORS[Math.floor(r() * TAG_COLORS.length)];
-      ctx.globalAlpha = 0.2 + r() * 0.35;
-      ctx.beginPath();
-      ctx.arc(r() * w, r() * h, 20 + r() * 60, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    // outlined tags
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    TAGS.forEach((tag, i) => {
-      ctx.save();
-      ctx.translate(120 + i * 235 + r() * 40, 70 + r() * 210);
-      ctx.rotate((r() - 0.5) * 0.35);
-      ctx.font = `${58 + Math.floor(r() * 36)}px ${IMPACT}`;
-      ctx.lineWidth = 9;
-      ctx.strokeStyle = "#101010";
-      ctx.strokeText(tag, 0, 0);
-      ctx.fillStyle = TAG_COLORS[i % TAG_COLORS.length];
-      ctx.fillText(tag, 0, 0);
-      ctx.restore();
-    });
-    // stickers
-    for (let i = 0; i < 22; i++) {
-      ctx.fillStyle = TAG_COLORS[Math.floor(r() * TAG_COLORS.length)];
-      ctx.fillRect(r() * w, r() * (h - 30), 20 + r() * 26, 14 + r() * 18);
-      ctx.strokeStyle = "rgba(0,0,0,0.6)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(r() * w, r() * (h - 30), 14, 10);
-    }
-  });
-}
-
-export function Walls() {
-  const tex = useMemo(() => [wallTexture(21), wallTexture(33)], []);
-  const L = SIZE + 8;
-  const H = 7;
-  const off = SIZE / 2 + 3.4;
-  const y = GROUND_Y + H / 2;
-  return (
-    <>
-      {/* wall on the far -x side, facing +x */}
-      <group position={[-off, 0, 0]}>
-        <Box pos={[0, y, 0]} size={[0.5, H, L]} color="#4a4742" cast={false} />
-        <mesh position={[0.26, y, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-          <planeGeometry args={[L, H]} />
-          <meshLambertMaterial map={tex[0]} />
-        </mesh>
-        <Box pos={[0, GROUND_Y + H + 0.12, 0]} size={[0.8, 0.25, L + 0.3]} color="#8c8a82" cast={false} />
-      </group>
-      {/* wall on the far -z side, facing +z */}
-      <group position={[0, 0, -off]}>
-        <Box pos={[0, y, 0]} size={[L, H, 0.5]} color="#4a4742" cast={false} />
-        <mesh position={[0, y, 0.26]} receiveShadow>
-          <planeGeometry args={[L, H]} />
-          <meshLambertMaterial map={tex[1]} />
-        </mesh>
-        <Box pos={[0, GROUND_Y + H + 0.12, 0]} size={[L + 0.3, 0.25, 0.8]} color="#8c8a82" cast={false} />
-      </group>
-    </>
-  );
-}
-
-// ---- street lamp and street props -------------------------------------------
-export function StreetLamp() {
-  const x = -SIZE / 2 - 1.6;
-  const z = -SIZE / 2 - 1.6;
-  const top = GROUND_Y + 7.6;
-  return (
-    <group position={[x, 0, z]}>
-      <Cyl pos={[0, GROUND_Y + 3.8, 0]} r={0.14} h={7.6} color="#33363a" seg={8} />
-      <Cyl pos={[0, GROUND_Y + 0.15, 0]} r={0.3} h={0.3} color="#2a2c2f" seg={8} />
-      <Box pos={[0.9, top, 0.9]} size={[2.2, 0.12, 0.12]} color="#33363a" rot={[0, -Math.PI / 4, 0]} />
-      <mesh position={[1.7, top - 0.2, 1.7]}>
-        <sphereGeometry args={[0.28, 12, 10]} />
-        <meshBasicMaterial color="#ffe7b0" />
-      </mesh>
-      <pointLight position={[1.7, top - 0.5, 1.7]} color="#ffd9a0" intensity={90} distance={34} decay={2} />
-    </group>
-  );
-}
-
-function Cone({ pos }) {
-  return (
-    <group position={pos}>
-      <Box pos={[0, 0.04, 0]} size={[0.6, 0.08, 0.6]} color="#e8631f" />
-      <Cyl pos={[0, 0.45, 0]} r={0.26} rTop={0.05} h={0.75} color="#f26a1f" seg={10} />
-      <Cyl pos={[0, 0.5, 0]} r={0.19} rTop={0.14} h={0.1} color="#ececec" seg={10} />
-    </group>
-  );
-}
-
-export function StreetProps() {
-  const g = GROUND_Y;
-  const d = SIZE / 2 + 2.6;
-  return (
-    <>
-      {/* traffic cones */}
-      {[
-        [d + 0.4, g, 7],
-        [d + 1.6, g, 8.2],
-        [8.5, g, d + 2.4],
-        [-d - 0.2, g, -4],
-      ].map((p, i) => (
-        <Cone key={i} pos={p} />
-      ))}
-      {/* fire hydrant */}
-      <group position={[d + 1.2, g, -6]}>
-        <Cyl pos={[0, 0.5, 0]} r={0.22} h={1} color="#c23b2a" seg={10} />
-        <mesh position={[0, 1.02, 0]} castShadow>
-          <sphereGeometry args={[0.24, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <Lam color="#c23b2a" />
-        </mesh>
-        <Cyl pos={[0, 0.65, 0]} r={0.11} h={0.7} color="#a52f20" seg={8} rot={[0, 0, Math.PI / 2]} />
-      </group>
-      {/* crates */}
-      <Box pos={[d + 1.5, g + 0.45, 3]} size={[0.9, 0.9, 0.9]} color="#8a6a3e" rot={[0, 0.2, 0]} />
-      <Box pos={[d + 1.4, g + 1.35, 3.1]} size={[0.8, 0.8, 0.8]} color="#7a5c34" rot={[0, -0.3, 0]} />
-      <Box pos={[-d - 1.2, g + 0.45, 5]} size={[0.9, 0.9, 0.9]} color="#8a6a3e" rot={[0, 0.5, 0]} />
-      {/* trash can */}
-      <group position={[-d - 0.8, g, -7]}>
-        <Cyl pos={[0, 0.55, 0]} r={0.4} rTop={0.46} h={1.1} color="#585b5e" seg={12} />
-        <Cyl pos={[0, 1.14, 0]} r={0.5} h={0.1} color="#44474a" seg={12} />
-      </group>
-      {/* manhole cover */}
-      <mesh position={[-7, g + 0.015, d + 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[0.7, 20]} />
-        <Lam color="#3a3a38" />
-      </mesh>
     </>
   );
 }

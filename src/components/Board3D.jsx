@@ -196,23 +196,39 @@ function Piece({ index, space, active, offset }) {
 }
 
 // Eases the orbit target to whichever piece the camera should follow.
-function Follow({ point }) {
+// Phone-style gestures: one finger drags the board around, two fingers pinch
+// to zoom and twist to rotate. (Mouse: left-drag pans, right-drag rotates,
+// wheel zooms.) Touching the view stops the auto-follow; the recenter button
+// or the next roll hands control back.
+const PAN_LIMIT = SIZE * 0.7;
+function Follow({ point, following, onUserMove }) {
   const controls = useRef();
   const goal = useMemo(() => new THREE.Vector3(), []);
   useFrame((_, dt) => {
     const c = controls.current;
     if (!c) return;
-    // Lean from the piece toward the board middle so the board stays in view.
-    goal.set(point.x * 0.55, 0, point.z * 0.55);
-    c.target.lerp(goal, Math.min(1, dt * 3));
+    if (following) {
+      // Lean from the piece toward the board middle so the board stays in view.
+      goal.set(point.x * 0.55, 0, point.z * 0.55);
+      c.target.lerp(goal, Math.min(1, dt * 3));
+    } else {
+      c.target.x = THREE.MathUtils.clamp(c.target.x, -PAN_LIMIT, PAN_LIMIT);
+      c.target.z = THREE.MathUtils.clamp(c.target.z, -PAN_LIMIT, PAN_LIMIT);
+    }
     c.update();
   });
   return (
     <OrbitControls
       ref={controls}
       makeDefault
-      enablePan={false}
-      minDistance={10}
+      enablePan
+      screenSpacePanning={false}
+      enableDamping
+      dampingFactor={0.12}
+      onStart={onUserMove}
+      mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
+      touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
+      minDistance={6}
       maxDistance={45}
       maxPolarAngle={Math.PI / 2.2}
     />
@@ -230,7 +246,7 @@ function modelPlacement(index) {
   return { pos: [x - w / 2 + inset, 0.1, z], rotY: Math.PI / 2 };
 }
 
-function Scene({ game, shown, focus, turn, rolling }) {
+function Scene({ game, shown, focus, turn, rolling, following, onUserMove }) {
   const point = useMemo(() => {
     const r = spaceRect(shown[focus]);
     return { x: r.x, z: r.z };
@@ -279,7 +295,7 @@ function Scene({ game, shown, focus, turn, rolling }) {
           offset={sharing ? (i === 0 ? -0.3 : 0.3) : 0}
         />
       ))}
-      <Follow point={point} />
+      <Follow point={point} following={following} onUserMove={onUserMove} />
     </>
   );
 }
@@ -291,6 +307,7 @@ export default function Board3D() {
   const [game, dispatch] = useReducer(gameReducer, undefined, createGame);
   const { players, turn, phase, message, dice } = game;
   const [shown, setShown] = useState(() => players.map((p) => p.space));
+  const [following, setFollowing] = useState(true);
   const [holding, setHolding] = useState(false);
   const holdTimer = useRef(null);
   useEffect(() => () => clearTimeout(holdTimer.current), []);
@@ -316,6 +333,7 @@ export default function Board3D() {
     if (busy) return;
     if (action.type === "ROLL" || action.type === "SKATE_THROW") {
       setLanded(null);
+      setFollowing(true);
       setHolding(true);
       clearTimeout(holdTimer.current);
       holdTimer.current = setTimeout(() => setHolding(false), DICE_MS);
@@ -340,9 +358,22 @@ export default function Board3D() {
 
   return (
     <div className="three-root">
-      <Canvas shadows camera={{ position: [0, 28, 26], fov: 45 }}>
-        <Scene game={game} shown={shown} focus={focus} turn={turn} rolling={holding} />
+      <Canvas shadows camera={{ position: [0, 17, 16], fov: 45 }}>
+        <Scene
+          game={game}
+          shown={shown}
+          focus={focus}
+          turn={turn}
+          rolling={holding}
+          following={following}
+          onUserMove={() => setFollowing(false)}
+        />
       </Canvas>
+      {!following && (
+        <button className="three-recenter" onClick={() => setFollowing(true)}>
+          ◎ Recenter
+        </button>
+      )}
 
       {landed && !busy && (
         <div className="three-card" style={{ borderColor: PLAYER_COLORS[landed.player] }}>

@@ -14,17 +14,17 @@ function B({ x, y, z, w, d, h, color }) {
   return (
     <mesh position={[x + w / 2, z + h / 2, y + d / 2]} castShadow>
       <boxGeometry args={[w, h, d]} />
-      <meshStandardMaterial color={color} roughness={0.6} />
+      <meshLambertMaterial color={color} />
     </mesh>
   );
 }
 
 // A cylinder lying along x (the lens), centred at (x, y, z).
-function Barrel({ x, y, z, r, len, color, rough = 0.5 }) {
+function Barrel({ x, y, z, r, len, color }) {
   return (
     <mesh position={[x + len / 2, z, y]} rotation={[0, 0, Math.PI / 2]} castShadow>
       <cylinderGeometry args={[r, r, len, 24]} />
-      <meshStandardMaterial color={color} roughness={rough} />
+      <meshLambertMaterial color={color} />
     </mesh>
   );
 }
@@ -43,7 +43,7 @@ export function Camcorder({ color }) {
       <Barrel x={0} y={3.5} z={4.5} r={3.7} len={2.2} color="#101112" />
       <mesh position={[-0.1, 4.5, 3.5]} rotation={[0, 0, Math.PI / 2]}>
         <circleGeometry args={[3.1, 24]} />
-        <meshStandardMaterial color="#1b2c4d" roughness={0.1} metalness={0.4} />
+        <meshLambertMaterial color="#1b2c4d" />
       </mesh>
       <B x={4.5} y={2.8} z={8} w={1.4} d={1.4} h={0.9} color={grey} />
       <B x={13} y={2.8} z={8} w={1.4} d={1.4} h={0.9} color={grey} />
@@ -66,7 +66,7 @@ export function Tape({ color }) {
       {[5.2, 9.3].map((x) => (
         <mesh key={x} position={[x, 3.1, -0.2]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[1, 1, 0.3, 16]} />
-          <meshStandardMaterial color="#e8e8e8" />
+          <meshLambertMaterial color="#e8e8e8" />
         </mesh>
       ))}
     </group>
@@ -121,7 +121,7 @@ export function Die({ value, rolling, position, seed = 0 }) {
   const mesh = useRef();
   const textures = useMemo(() => [1, 2, 3, 4, 5, 6].map(faceTexture), []);
   const materials = useMemo(
-    () => FACE_VALUES.map((v) => new THREE.MeshStandardMaterial({ map: textures[v - 1], roughness: 0.4 })),
+    () => FACE_VALUES.map((v) => new THREE.MeshLambertMaterial({ map: textures[v - 1] })),
     [textures]
   );
   const spin = useMemo(

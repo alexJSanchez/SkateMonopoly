@@ -1,18 +1,84 @@
-/* Three.js board prototype (?3d) */
+/* Three.js board (?3d): gritty 90s VHS skate-video look */
 .three-root {
   position: fixed;
   inset: 0;
-  background: #e9d9bf;
+  background: #3b3f47;
+  font-family: "Courier New", ui-monospace, monospace;
+  --cream: #e8dcc0;
+  --ink: #1a1a18;
+  --yellow: #f2b632;
+  --red: #d6402b;
 }
+
+/* ---- VHS overlay ---- */
+.vhs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background:
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.18) 0, rgba(0, 0, 0, 0.18) 1px, transparent 1px, transparent 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+.vhs span {
+  position: absolute;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  color: var(--cream);
+  text-shadow: 1px 1px 0 #000;
+}
+.vhs-tl {
+  top: 12px;
+  left: 16px;
+  animation: vhs-blink 1s steps(1) infinite;
+}
+.vhs-tl::first-letter {
+  color: var(--red);
+}
+.vhs-tr {
+  top: 12px;
+  right: 16px;
+}
+.vhs-bl {
+  bottom: 12px;
+  left: 16px;
+}
+.vhs-br {
+  bottom: 12px;
+  right: 16px;
+}
+@keyframes vhs-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+.vhs-toggle {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  color: var(--cream);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-shadow: 1px 1px 0 #000;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ---- HUD ---- */
 .three-hud {
   position: absolute;
   inset: 0;
+  z-index: 4;
   pointer-events: none;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 14px;
-  color: #1a1a1a;
+  padding: 44px 16px 40px;
+  color: var(--cream);
+  text-shadow: 1px 1px 0 #000;
 }
 .three-players {
   display: flex;
@@ -30,7 +96,7 @@
   display: inline-block;
   width: 12px;
   height: 12px;
-  border-radius: 50%;
+  border: 1px solid #000;
   margin-right: 6px;
 }
 .three-panel {
@@ -39,41 +105,66 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  max-width: 520px;
+  max-width: 540px;
   text-align: center;
 }
 .three-msg {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(20, 20, 18, 0.82);
+  border: 1px solid rgba(232, 220, 192, 0.4);
   padding: 6px 12px;
-  border-radius: 10px;
+  text-shadow: none;
+}
+.three-dice {
+  font-weight: bold;
+}
+.three-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+.three-actions button,
+.three-recenter {
+  padding: 8px 16px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--yellow);
+  color: var(--ink);
+  font: bold 15px "Courier New", ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 #000;
+  cursor: pointer;
+}
+.three-actions button:active,
+.three-recenter:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #000;
+}
+.three-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 .three-recenter {
   position: absolute;
-  right: 14px;
-  bottom: 14px;
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 999px;
-  background: #1a1a1a;
-  color: #fff;
-  font-size: 15px;
-  cursor: pointer;
+  right: 16px;
+  bottom: 44px;
+  z-index: 5;
 }
+
+/* ---- property card ---- */
 .three-card {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 44px;
+  right: 16px;
+  z-index: 5;
   width: 220px;
-  background: #fff;
-  color: #1a1a1a;
+  background: var(--cream);
+  color: var(--ink);
   border: 3px solid #888;
-  border-radius: 12px;
+  box-shadow: 4px 4px 0 #000;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-}
-.three-card {
-  position: absolute;
-  background: #fbf6ea;
 }
 .three-card-close {
   position: absolute;
@@ -82,8 +173,7 @@
   width: 26px;
   height: 26px;
   border: 0;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.65);
   color: #fff;
   cursor: pointer;
   line-height: 1;
@@ -93,6 +183,7 @@
   width: 100%;
   height: 110px;
   object-fit: cover;
+  filter: contrast(1.05) saturate(0.85);
 }
 .three-card-info {
   display: flex;
@@ -103,24 +194,5 @@
 }
 .three-card-info strong {
   font-size: 15px;
-}
-.three-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  pointer-events: auto;
-}
-.three-actions button {
-  padding: 8px 16px;
-  border-radius: 999px;
-  border: 0;
-  background: #1a1a1a;
-  color: #fff;
-  font-size: 15px;
-  cursor: pointer;
-}
-.three-actions button:disabled {
-  opacity: 0.4;
-  cursor: default;
+  text-transform: uppercase;
 }

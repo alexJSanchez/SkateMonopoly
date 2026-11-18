@@ -120,9 +120,16 @@ export function Skater({ build = "baggy", shirt = "#3f78b5", hatColor, board = t
 }
 
 // A flag in the owner's colour on a thin pole, planted on a tile's outer edge.
-export function Flag({ color }) {
+export function Flag({ color, accent = null }) {
   return (
     <group>
+      {/* optional owner-colour tag under the cloth (the diorama's flags are all mustard) */}
+      {accent && (
+        <mesh position={[0.2, 0.68, 0]} castShadow>
+          <boxGeometry args={[0.4, 0.1, 0.022]} />
+          <meshLambertMaterial color={accent} side={THREE.DoubleSide} />
+        </mesh>
+      )}
       <mesh position={[0, 0.5, 0]} castShadow>
         <cylinderGeometry args={[0.025, 0.025, 1, 6]} />
         <meshLambertMaterial color="#cfcfcf" />

@@ -262,3 +262,162 @@
   font-size: 15px;
   text-transform: uppercase;
 }
+
+/* ---- art direction controls ---- */
+.art-controls {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: var(--cream);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-shadow: 1px 1px 0 #000;
+  user-select: none;
+}
+.art-controls select {
+  font: inherit;
+  padding: 2px 6px;
+  background: var(--cream);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+}
+.art-controls label {
+  cursor: pointer;
+}
+
+/* ---- the hand-painted diorama look ---- */
+.three-root.art-diorama {
+  background: #bfd9e8;
+  font-family: "Trebuchet MS", "Avenir Next", system-ui, sans-serif;
+  --cream: #f1e3c6;
+  --ink: #2e3440;
+  --yellow: #c8553d; /* buttons use the terracotta; mustard stays reserved for flags */
+  --red: #9e3f32;
+}
+.art-diorama .art-controls {
+  color: var(--ink);
+  text-shadow: none;
+}
+.art-diorama .three-hud {
+  color: var(--ink);
+  text-shadow: none;
+}
+.art-diorama .three-player .dot {
+  border-color: var(--ink);
+}
+.art-diorama .three-msg {
+  background: var(--cream);
+  color: var(--ink);
+  border: 2px solid #2a2230;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 #2a2230;
+}
+.art-diorama .three-actions button,
+.art-diorama .three-recenter {
+  background: #c8553d;
+  color: #f1e3c6;
+  border: 2px solid #2a2230;
+  border-radius: 10px;
+  font-family: inherit;
+  text-transform: none;
+  box-shadow: 0 3px 0 #2a2230;
+}
+.art-diorama .three-actions button:active,
+.art-diorama .three-recenter:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #2a2230;
+}
+.art-diorama .three-card {
+  background: var(--cream);
+  border: 3px solid #2a2230;
+  border-radius: 12px;
+  box-shadow: 0 4px 0 #2a2230;
+}
+.art-diorama .three-card-info strong {
+  text-transform: none;
+}
+.art-diorama .vhs-caption {
+  background: var(--cream);
+  color: var(--ink);
+  border: 2px solid #2a2230;
+  border-left: 8px solid #c8553d;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 #2a2230;
+}
+.art-diorama .vhs-caption strong {
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  text-shadow: none;
+}
+.art-diorama .vhs-caption span {
+  letter-spacing: 0.08em;
+}
+
+/* the filmed-trick loop: a camera flash at ~60% and a "NEW SPOT" stamp at 72-92% of 6 s */
+.dio-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: #fff;
+  opacity: 0;
+  animation: dio-flash 6s linear infinite;
+}
+@keyframes dio-flash {
+  0%,
+  59% {
+    opacity: 0;
+  }
+  60% {
+    opacity: 0.7;
+  }
+  66%,
+  100% {
+    opacity: 0;
+  }
+}
+.dio-stamp {
+  position: absolute;
+  top: 24%;
+  left: 6%;
+  z-index: 6;
+  pointer-events: none;
+  padding: 6px 16px;
+  background: #c8553d;
+  color: #f1e3c6;
+  border: 3px solid #2a2230;
+  font: 800 28px "Arial Narrow", "Trebuchet MS", sans-serif;
+  letter-spacing: 0.08em;
+  transform: rotate(-6deg);
+  opacity: 0;
+  animation: dio-stamp 6s linear infinite;
+}
+@keyframes dio-stamp {
+  0%,
+  71% {
+    opacity: 0;
+    transform: rotate(-6deg) scale(1.25);
+  }
+  76% {
+    opacity: 1;
+    transform: rotate(-6deg) scale(1);
+  }
+  88% {
+    opacity: 1;
+  }
+  92%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* squint test: blur the canvas to check that districts and shapes still read */
+.squint canvas {
+  filter: blur(4px);
+}

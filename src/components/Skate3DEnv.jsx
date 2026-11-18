@@ -1,18 +1,22 @@
 /* eslint-disable react/no-unknown-property, react/prop-types */
-// The look of the 3D board: a gritty 90s VHS skate-video street spot.
-// Everything is procedural (canvas textures + primitives) and seeded, so the
-// scene is the same every time. Lambert materials throughout.
-import { useMemo, useRef } from "react";
+// The street-spot scene: slab, centre mat, props and the looping filmed trick,
+// painted in the hand-painted low-poly style (src/components/paint.js): strict
+// palette, painted gradients, dark inverted-hull outlines. Everything is
+// procedural (canvas textures + primitives) and seeded, so it is the same every
+// time. Lambert materials throughout.
+import { useContext, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { SIZE, UNIT } from "./layout3d";
 import { Skater } from "./Skater3D";
 import { Camcorder } from "./Models3D";
+import { HULL, OutlineCtx, PAL, lam, outlineFor, snap } from "./paint";
 
 export const GROUND_Y = -0.6;
-const CREAM = "#E8DCC0";
-const YELLOW = "#F2B632";
-const RED = "#D6402B";
+// Palette stand-ins for the colours this scene used to hard-code.
+const CREAM = PAL.cream;
+const YELLOW = PAL.tan; // (mustard is reserved for flags)
+const RED = PAL.terracotta;
 const IMPACT = "Impact, 'Arial Narrow Bold', 'Arial Black', sans-serif";
 
 // ---- tiny helpers -----------------------------------------------------------
@@ -41,58 +45,85 @@ export function canvasTexture(w, h, draw, repeat) {
   return t;
 }
 
-// Concrete speckle, used on every tile (tinted by the material colour).
+// The tiles' painted surface: a soft top-left light and a little brush-stroke
+// texture instead of noise (tinted by the material colour).
 let concrete = null;
 export function concreteTexture() {
   concrete ??= canvasTexture(128, 128, (ctx, w, h) => {
     const r = rngFor(7);
-    ctx.fillStyle = "#f2f0ea";
+    const g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, "#ffffff");
+    g.addColorStop(1, "#dcd9d2");
+    ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 900; i++) {
-      const v = 150 + Math.floor(r() * 105);
-      ctx.fillStyle = `rgba(${v},${v},${v - 6},${0.25 + r() * 0.5})`;
-      ctx.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2);
+    for (let i = 0; i < 26; i++) {
+      ctx.strokeStyle = `rgba(0,0,0,${0.03 + r() * 0.04})`;
+      ctx.lineWidth = 2 + r() * 3;
+      ctx.beginPath();
+      const x = r() * w;
+      const y = r() * h;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 14 + r() * 26, y + (r() - 0.5) * 6);
+      ctx.stroke();
     }
   });
   return concrete;
 }
 
 export function Lam({ color, ...rest }) {
-  return <meshLambertMaterial color={color} {...rest} />;
+  return <meshLambertMaterial color={snap(color)} {...rest} />;
 }
 
-export function Box({ pos, size, color, rot, cast = true }) {
+// A box. Its dark inverted-hull outline is sized to the box (see outlineFor);
+// pass t to override, t={0} for none.
+export function Box({ pos, size, color, rot, cast = true, t }) {
+  const outlines = useContext(OutlineCtx);
+  const th = t ?? outlineFor(Math.max(...size));
   return (
-    <mesh position={pos} rotation={rot} castShadow={cast} receiveShadow>
-      <boxGeometry args={size} />
-      <Lam color={color} />
-    </mesh>
+    <group position={pos} rotation={rot}>
+      <mesh material={lam(color)} castShadow={cast} receiveShadow>
+        <boxGeometry args={size} />
+      </mesh>
+      {th > 0 && outlines && (
+        <mesh material={HULL} scale={size.map((v) => (v + 2 * th) / v)}>
+          <boxGeometry args={size} />
+        </mesh>
+      )}
+    </group>
   );
 }
 
-export function Cyl({ pos, r, h, color, seg = 12, rot, rTop }) {
+export function Cyl({ pos, r, h, color, seg = 12, rot, rTop, t }) {
+  const outlines = useContext(OutlineCtx);
+  const th = t ?? outlineFor(Math.max(2 * r, h));
   return (
-    <mesh position={pos} rotation={rot} castShadow receiveShadow>
-      <cylinderGeometry args={[rTop ?? r, r, h, seg]} />
-      <Lam color={color} />
-    </mesh>
+    <group position={pos} rotation={rot}>
+      <mesh material={lam(color)} castShadow receiveShadow>
+        <cylinderGeometry args={[rTop ?? r, r, h, seg]} />
+      </mesh>
+      {th > 0 && outlines && (
+        <mesh material={HULL} scale={[(2 * r + 2 * th) / (2 * r), (h + 2 * th) / h, (2 * r + 2 * th) / (2 * r)]}>
+          <cylinderGeometry args={[rTop ?? r, r, h, seg]} />
+        </mesh>
+      )}
+    </group>
   );
 }
 
-// ---- the slab the board sits on, with its yellow curb -------------------------
+// ---- the slab the board sits on, with its painted curb -------------------------
 export function Slab() {
   const half = SIZE / 2 + 0.7;
   return (
     <>
-      <Box pos={[0, -0.3, 0]} size={[SIZE + 1.4, 0.6, SIZE + 1.4]} color="#6a675f" />
-      {/* yellow painted curb band around the slab's top edge */}
+      <Box pos={[0, -0.3, 0]} size={[SIZE + 1.4, 0.6, SIZE + 1.4]} color={PAL.slab} />
+      {/* painted curb band around the slab's top edge */}
       {[
         [[0, 0.04, half - 0.14], [SIZE + 1.4, 0.1, 0.28]],
         [[0, 0.04, -half + 0.14], [SIZE + 1.4, 0.1, 0.28]],
         [[half - 0.14, 0.04, 0], [0.28, 0.1, SIZE + 1.4]],
         [[-half + 0.14, 0.04, 0], [0.28, 0.1, SIZE + 1.4]],
       ].map(([pos, size], i) => (
-        <Box key={i} pos={pos} size={size} color={YELLOW} cast={false} />
+        <Box key={i} pos={pos} size={size} color={YELLOW} cast={false} t={0} />
       ))}
     </>
   );
@@ -114,7 +145,7 @@ export function CenterMat() {
   const tex = useMemo(
     () =>
       canvasTexture(768, 768, (ctx, w, h) => {
-        ctx.fillStyle = "#1c1d20";
+        ctx.fillStyle = PAL.ink;
         ctx.fillRect(0, 0, w, h);
         ctx.strokeStyle = "rgba(232,220,192,0.07)";
         ctx.lineWidth = 1;
@@ -161,10 +192,10 @@ export function CenterMat() {
 function drawTvFrame(ctx, w, h, t, rng) {
   ctx.fillStyle = "#35634f";
   ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = "#2b2a28";
+  ctx.fillStyle = PAL.asphalt;
   ctx.fillRect(0, 100, w, h - 100);
   // tiny replay: a quarter-pipe and a skater arcing off the lip
-  ctx.fillStyle = "#c9964e";
+  ctx.fillStyle = PAL.ply;
   ctx.beginPath();
   ctx.moveTo(40, 100);
   ctx.lineTo(90, 100);
@@ -333,16 +364,21 @@ export function CenterProps() {
       {stickers.map((s, i) => (
         <mesh key={i} position={[s.x, 0.012, s.z]} rotation={[-Math.PI / 2, 0, s.rot]}>
           <planeGeometry args={[s.s, s.s * 0.7]} />
-          <meshLambertMaterial color={s.c} />
+          <meshLambertMaterial color={snap(s.c)} />
         </mesh>
       ))}
     </group>
   );
 }
 
-// ---- the looping trick: skater, ramp, filmer ---------------------------------
+// ---- the filmed trick: a 6 s loop ---------------------------------------------------
+// 0-12%  a quarter-pipe pops in (squash and stretch) with a flag on its tile
+// 15-75% the skater rides it, launches off the lip in an ollie and lands
+// ~60%   a camera flash;  72-92% a "NEW SPOT" stamp (in the page overlay);
+// 92-100% the ramp shrinks away, then it repeats.
 const R = 1.8; // quarter-pipe radius (and height)
-const LOOP = 3.6;
+const LOOP = 6;
+const easeOutBack = (t) => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2);
 
 function rampGeometry(width) {
   const shape = new THREE.Shape();
@@ -358,50 +394,78 @@ function rampGeometry(width) {
   return g;
 }
 
-// Position and board pitch of the trick skater over the loop (ramp-local space).
-function trickPose(t) {
-  if (t < 1.3) return { x: -7 + (t / 1.3) * 7, y: 0, pitch: 0 };
-  if (t < 2.0) {
-    const x = ((t - 1.3) / 0.7) * R * 0.985;
+// Ramp-local position and board pitch of the skater at loop progress p (0.15-0.75).
+function trickPose(p) {
+  const u = (p - 0.15) / 0.6;
+  if (u < 0.32) return { x: -7 + (u / 0.32) * 7, y: 0, pitch: 0 };
+  if (u < 0.45) {
+    const x = ((u - 0.32) / 0.13) * R * 0.985;
     return { x, y: R - Math.sqrt(R * R - x * x), pitch: Math.min(1.2, Math.atan(x / Math.sqrt(R * R - x * x))) };
   }
-  if (t < 2.8) {
-    const dt = t - 2.0;
-    const vy = 3.4 - 14 * dt;
-    return { x: R + 2.2 * dt, y: Math.max(0, R + 3.4 * dt - 7 * dt * dt), pitch: Math.atan2(vy, 2.2) * 0.5 };
+  if (u < 0.7) {
+    const dt = (u - 0.45) / 0.25;
+    return { x: R + dt * 2.6, y: Math.max(0, R + 3.0 * dt - 5.2 * dt * dt), pitch: (0.6 - dt * 1.4) * 0.6 };
   }
-  return { x: R + 2.2 * 0.8 + ((t - 2.8) / 0.8) * 1.7, y: 0, pitch: 0 };
+  return { x: R + 2.6 + ((u - 0.7) / 0.3) * 1.6, y: 0, pitch: 0 };
 }
 
 export function TrickLoop() {
+  const outlines = useContext(OutlineCtx);
+  const ramp = useRef();
   const rider = useRef();
+  const board = useRef();
   const led = useRef();
   const geom = useMemo(() => rampGeometry(2.4), []);
   useFrame((s) => {
-    const p = trickPose(s.clock.elapsedTime % LOOP);
+    const p = (s.clock.elapsedTime % LOOP) / LOOP;
+    if (ramp.current) {
+      // pop in with squash and stretch (back-out on Y, widening on XZ), hold, then shrink away
+      let k;
+      if (p < 0.12) k = Math.max(0, easeOutBack(p / 0.12));
+      else if (p < 0.92) k = 1;
+      else k = Math.max(0, 1 - (p - 0.92) / 0.08);
+      const wide = 1 + (1 - Math.min(1, k)) * 0.25;
+      ramp.current.scale.set(wide, k, wide);
+    }
     if (rider.current) {
-      rider.current.position.set(p.x, p.y, 0);
-      rider.current.rotation.z = p.pitch;
+      const on = p >= 0.15 && p <= 0.75;
+      rider.current.visible = on;
+      if (on) {
+        const pose = trickPose(p);
+        rider.current.position.set(pose.x, pose.y, 0);
+        if (board.current) board.current.rotation.z = pose.pitch;
+      }
     }
     if (led.current) led.current.visible = Math.floor(s.clock.elapsedTime * 2) % 2 === 0;
   });
   return (
     <group position={[-1.5, GROUND_Y, SIZE / 2 + 3.6]}>
-      <mesh geometry={geom} castShadow receiveShadow>
-        <meshLambertMaterial color="#8a6a3e" />
-      </mesh>
-      <Cyl pos={[R, R, 0]} r={0.05} h={2.5} color="#c3c6c8" seg={8} rot={[Math.PI / 2, 0, 0]} />
+      <group ref={ramp}>
+        <mesh geometry={geom} material={lam(PAL.ply)} castShadow receiveShadow />
+        {outlines && <mesh geometry={geom} material={HULL} scale={[1.05, 1.04, 1.07]} />}
+        <Cyl pos={[R, R, 0]} r={0.05} h={2.5} color={PAL.street} seg={8} rot={[Math.PI / 2, 0, 0]} t={0} />
+      </group>
       <group ref={rider}>
-        <Skater build="pro" shirt="#d6402b" scale={1.25} />
+        <group ref={board}>
+          <Skater build="lanky" shirt={PAL.teal} scale={1.25} />
+        </group>
+      </group>
+      {/* the owned-spot flag: the one place mustard is allowed */}
+      <group position={[-0.6, 0, 2.4]}>
+        <Cyl pos={[0, 0.9, 0]} r={0.04} h={1.8} color={PAL.ink} seg={6} t={0} />
+        <mesh position={[0.4, 1.55, 0]}>
+          <boxGeometry args={[0.8, 0.5, 0.04]} />
+          <meshLambertMaterial color={PAL.mustard} />
+        </mesh>
       </group>
       {/* the filmer, camcorder up, red REC light blinking */}
-      <group position={[2.0, 0, 2.7]} rotation={[0, Math.PI, 0]}>
-        <Skater build="shortie" shirt="#3E7CB1" board={false} scale={1.25} />
-        <group position={[0.05, 0.72, 0.28]} rotation={[0, Math.PI / 2, 0]} scale={0.7}>
-          <Camcorder color="#444" />
+      <group position={[2.4, 0, 3.4]} rotation={[0, Math.PI, 0]}>
+        <Skater build="shortie" shirt={PAL.deepTeal} board={false} scale={1.25} />
+        <group position={[0.1, 0.9, 0.35]} rotation={[0, Math.PI / 2, 0]} scale={0.8}>
+          <Camcorder color={PAL.ink} />
         </group>
-        <mesh ref={led} position={[0.1, 0.86, 0.36]}>
-          <sphereGeometry args={[0.03, 6, 6]} />
+        <mesh ref={led} position={[0.15, 1.08, 0.42]}>
+          <sphereGeometry args={[0.035, 6, 6]} />
           <meshBasicMaterial color="#ff2a1a" />
         </mesh>
       </group>

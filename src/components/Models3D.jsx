@@ -3,6 +3,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { snap } from "./paint";
 
 // ---- Camcorder + tape -------------------------------------------------------
 // Both are described in the same little units as the CSS version
@@ -43,7 +44,7 @@ export function Camcorder({ color }) {
       <Barrel x={0} y={3.5} z={4.5} r={3.7} len={2.2} color="#101112" />
       <mesh position={[-0.1, 4.5, 3.5]} rotation={[0, 0, Math.PI / 2]}>
         <circleGeometry args={[3.1, 24]} />
-        <meshLambertMaterial color="#1b2c4d" />
+        <meshLambertMaterial color={snap("#1b2c4d")} />
       </mesh>
       <B x={4.5} y={2.8} z={8} w={1.4} d={1.4} h={0.9} color={grey} />
       <B x={13} y={2.8} z={8} w={1.4} d={1.4} h={0.9} color={grey} />
@@ -66,7 +67,7 @@ export function Tape({ color }) {
       {[5.2, 9.3].map((x) => (
         <mesh key={x} position={[x, 3.1, -0.2]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[1, 1, 0.3, 16]} />
-          <meshLambertMaterial color="#e8e8e8" />
+          <meshLambertMaterial color={snap("#e8e8e8")} />
         </mesh>
       ))}
     </group>

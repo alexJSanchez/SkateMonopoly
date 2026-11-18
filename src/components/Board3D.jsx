@@ -2,7 +2,7 @@
 // Three.js (React Three Fiber) board: an isometric, gritty 90s VHS skate-video
 // street spot. It plays the same game (src/game/rules.js) as the CSS board,
 // so only the rendering differs. Open it with  http://localhost:5173/?3d
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -17,13 +17,13 @@ import { SIZE, TILE_H, headingFor, spaceRect, tileHeight, track } from "./layout
 import { CenterMat, CenterProps, Slab, TrickLoop, concreteTexture } from "./Skate3DEnv";
 import { Atmosphere, LocationScene } from "./Scenery3D";
 import { LOCATION_THEMES } from "../game/locationThemes";
-import { DIORAMA_PLAYERS, DioramaWorld, PAL, dioramaTile } from "./Diorama3D";
+import { HULL, OutlineCtx, PAL, PLAYER_PAL, snap } from "./paint";
 
 const STEP_MS = 220;
 const MAX_WALK = 12;
 const DICE_MS = 900;
 
-// Gritty tape-era palette: concrete tiles, hard-edged colour-group stripes.
+// Concrete tiles with painted colour-group stripes (all snapped to the palette).
 const GROUP_COLORS = {
   usa: "#b5532f",
   canada: "#3E7CB1",
@@ -35,9 +35,9 @@ const GROUP_COLORS = {
   brand: "#2b2a28",
   other: "#4d5b8a",
 };
-const CONCRETE = "#8C8A82";
+const CONCRETE = PAL.street; // light street, so the ground reads against the darker walls
 const TYPE_TINTS = { chance: "#a8946a", trivia: "#8a86a8", tax: "#a87a74", corner: "#a39b84" };
-const PLAYER_COLORS = ["#3f78b5", "#c4504a"];
+const PLAYER_COLORS = PLAYER_PAL; // slate blue and terracotta
 const BUILDS = ["baggy", "lanky"];
 const INK = "#1a1a18";
 const IMPACT = "Impact, 'Arial Narrow Bold', 'Arial Black', sans-serif";
@@ -102,15 +102,14 @@ function Label({ text, price, big, w, d, rotation, ink = INK }) {
   );
 }
 
-function Space({ index, selected, onSelect, art }) {
+function Space({ index, selected, onSelect }) {
+  const outlines = useContext(OutlineCtx);
   const space = boardSpaces[index];
   const { x, z, w, d } = spaceRect(index);
   const h = tileHeight(index);
-  // The diorama paints tiles as low asphalt with a coloured curb strip.
-  const dio = art === "diorama" ? dioramaTile(index) : null;
-  const tint = dio ? dio.base : TYPE_TINTS[space.type] ?? CONCRETE;
-  const band = dio ? dio.curb : space.group ? GROUP_COLORS[space.group] : null;
-  const showBand = dio ? space.type !== "corner" : band && space.type === "property";
+  const tint = snap(TYPE_TINTS[space.type] ?? CONCRETE);
+  const band = space.group ? snap(GROUP_COLORS[space.group]) : null;
+  const showBand = band && space.type === "property";
   const rot = labelRotation(index);
   const { row, col } = track(index);
   const concrete = useMemo(() => concreteTexture(), []);
@@ -158,22 +157,20 @@ function Space({ index, selected, onSelect, art }) {
           <boxGeometry args={[w * 0.96, h, d * 0.96]} />
           <meshLambertMaterial
             color={tint}
-            map={dio ? null : concrete}
+            map={concrete}
             emissive={glow}
             emissiveIntensity={selected ? 0.4 : hovered ? 0.3 : 0}
           />
         </mesh>
+        {outlines && (
+          <mesh material={HULL} position={[0, h / 2, 0]} scale={[(w * 0.96 + 0.07) / (w * 0.96), (h + 0.07) / h, (d * 0.96 + 0.07) / (d * 0.96)]}>
+            <boxGeometry args={[w * 0.96, h, d * 0.96]} />
+          </mesh>
+        )}
         {showBand && (
           <mesh position={[bandPos[0], h + 0.012, bandPos[1]]} receiveShadow>
             <boxGeometry args={bandDims} />
             <meshLambertMaterial color={band} />
-          </mesh>
-        )}
-        {/* diorama: a slim band of the country/brand colour on the outer edge */}
-        {dio && dio.band && space.type === "property" && (
-          <mesh position={[-bandPos[0] * 1.04, h + 0.012, -bandPos[1] * 1.04]} receiveShadow>
-            <boxGeometry args={[bandDims[0] > bandDims[2] ? bandDims[0] : 0.14, 0.03, bandDims[0] > bandDims[2] ? 0.14 : bandDims[2]]} />
-            <meshLambertMaterial color={dio.band} />
           </mesh>
         )}
         <group position={[0, h - 0.07, 0]}>
@@ -184,7 +181,6 @@ function Space({ index, selected, onSelect, art }) {
             w={w * 0.9}
             d={d * 0.9}
             rotation={rot}
-            ink={dio ? dio.text : INK}
           />
         </group>
       </group>
@@ -314,9 +310,9 @@ function modelPlacement(index) {
   return { pos: [x - w / 2 + inset, y, z], rotY: Math.PI / 2, flag: [x + w / 2 - 0.14, TILE_H, z] };
 }
 
-function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selectedSpace, onSelect, sceneSpace, art, colors, outlines }) {
+function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selectedSpace, onSelect, sceneSpace, outlines }) {
   const theme = LOCATION_THEMES[sceneSpace];
-  const diorama = art === "diorama";
+  const colors = PLAYER_COLORS;
   const point = useMemo(() => {
     const r = spaceRect(shown[focus]);
     return { x: r.x, z: r.z };
@@ -328,24 +324,17 @@ function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selec
     return { x: r.x, z: r.z };
   }, [shown, roller]);
   return (
-    <>
-      {diorama ? (
-        // hand-painted diorama: sky, light and a quiet street of buildings
-        <DioramaWorld sceneSpace={sceneSpace} outlines={outlines} />
-      ) : (
-        <>
-          {/* sky, light and surroundings change with the location the skater is at */}
-          <Atmosphere theme={theme} />
-          <Slab />
-          <LocationScene theme={theme} index={sceneSpace} />
-          {theme.trick && <TrickLoop />}
-          <CenterMat />
-          <CenterProps />
-        </>
-      )}
+    <OutlineCtx.Provider value={outlines}>
+      {/* sky, light and surroundings change with the location the skater is at */}
+      <Atmosphere theme={theme} />
+      <Slab />
+      <LocationScene theme={theme} index={sceneSpace} />
+      {theme.trick && <TrickLoop />}
+      <CenterMat />
+      <CenterProps />
 
       {boardSpaces.map((_, i) => (
-        <Space key={i} index={i} selected={selectedSpace === i} onSelect={onSelect} art={art} />
+        <Space key={i} index={i} selected={selectedSpace === i} onSelect={onSelect} />
       ))}
       {boardSpaces.map((sp, i) => {
         const owner = ownerOf(game, i);
@@ -358,8 +347,8 @@ function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selec
               {game.tapes.includes(i) ? <Tape color={color} /> : <Camcorder color={color} />}
             </group>
             <group position={flag}>
-              {/* the diorama keeps mustard for owned-spot flags only */}
-              <Flag color={diorama ? PAL.mustard : color} accent={diorama ? color : null} />
+              {/* mustard is reserved for owned-spot flags; the owner's colour is the tag under it */}
+              <Flag color={PAL.mustard} accent={color} />
             </group>
           </group>
         );
@@ -381,7 +370,7 @@ function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selec
         />
       ))}
       <Follow point={point} following={following} onUserMove={onUserMove} />
-    </>
+    </OutlineCtx.Provider>
   );
 }
 
@@ -397,12 +386,11 @@ export default function Board3D() {
   const [shown, setShown] = useState(() => players.map((p) => p.space));
   const [following, setFollowing] = useState(true);
   const [holding, setHolding] = useState(false);
-  const [vhs, setVhs] = useState(true);
-  // Two art directions on the same game: the hand-painted diorama, and the VHS skate-video look.
-  const [art, setArt] = useState(() => (new URLSearchParams(window.location.search).get("art") === "vhs" ? "vhs" : "diorama"));
+  // Look options: dark outlines, a blur "squint test", and the old VHS scanline overlay.
   const [outlines, setOutlines] = useState(true);
   const [squint, setSquint] = useState(false);
-  const colors = art === "diorama" ? DIORAMA_PLAYERS : PLAYER_COLORS;
+  const [vhs, setVhs] = useState(false);
+  const colors = PLAYER_COLORS;
   const holdTimer = useRef(null);
   useEffect(() => () => clearTimeout(holdTimer.current), []);
 
@@ -468,7 +456,7 @@ export default function Board3D() {
   const targets = phase === "skate_pick" ? skateTargets(game, turn) : [];
 
   return (
-    <div className={`three-root art-${art}${squint ? " squint" : ""}`}>
+    <div className={`three-root painted${squint ? " squint" : ""}`}>
       <Canvas
         shadows
         flat
@@ -488,21 +476,19 @@ export default function Board3D() {
           following={following}
           onUserMove={() => setFollowing(false)}
           sceneSpace={sceneSpace}
-          art={art}
-          colors={colors}
           outlines={outlines}
         />
       </Canvas>
 
-      {/* VHS "cut" between locations, and the lower-third caption */}
-      {art === "vhs" && vhs && cut > 0 && <div key={`cut${cut}`} className="vhs-cut" aria-hidden="true" />}
+      {/* a camera flash cuts between locations, and a lower-third caption names the spot */}
+      {cut > 0 && <div key={`cut${cut}`} className="cam-flash" aria-hidden="true" />}
       <div key={`cap${cut}`} className="vhs-caption" aria-live="polite">
         <strong>{theme.name}</strong>
         <span>{theme.sub}</span>
       </div>
 
-      {/* VHS overlay: scanlines, vignette and the camcorder read-outs */}
-      {art === "vhs" && vhs && (
+      {/* optional VHS overlay: scanlines, vignette and the camcorder read-outs */}
+      {vhs && (
         <div className="vhs" aria-hidden="true">
           <span className="vhs-tl">● REC</span>
           <span className="vhs-tr">PLAY ▶</span>
@@ -511,26 +497,17 @@ export default function Board3D() {
         </div>
       )}
       <div className="art-controls">
-        <select value={art} onChange={(e) => setArt(e.target.value)} aria-label="Art style">
-          <option value="diorama">Diorama</option>
-          <option value="vhs">VHS</option>
-        </select>
-        {art === "vhs" ? (
-          <label>
-            <input type="checkbox" checked={vhs} onChange={(e) => setVhs(e.target.checked)} /> VHS
-          </label>
-        ) : (
-          <>
-            <label>
-              <input type="checkbox" checked={outlines} onChange={(e) => setOutlines(e.target.checked)} /> Outlines
-            </label>
-            <label>
-              <input type="checkbox" checked={squint} onChange={(e) => setSquint(e.target.checked)} /> Squint test
-            </label>
-          </>
-        )}
+        <label>
+          <input type="checkbox" checked={outlines} onChange={(e) => setOutlines(e.target.checked)} /> Outlines
+        </label>
+        <label>
+          <input type="checkbox" checked={squint} onChange={(e) => setSquint(e.target.checked)} /> Squint test
+        </label>
+        <label>
+          <input type="checkbox" checked={vhs} onChange={(e) => setVhs(e.target.checked)} /> VHS overlay
+        </label>
       </div>
-      {art === "diorama" && (
+      {theme.trick && (
         <>
           {/* the filmed-trick loop's camera flash and "NEW SPOT" stamp (6 s, in step with the 3D loop) */}
           <div className="dio-flash" aria-hidden="true" />

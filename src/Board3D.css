@@ -291,7 +291,7 @@
 }
 
 /* ---- the hand-painted diorama look ---- */
-.three-root.art-diorama {
+.three-root.painted {
   background: #bfd9e8;
   font-family: "Trebuchet MS", "Avenir Next", system-ui, sans-serif;
   --cream: #f1e3c6;
@@ -299,26 +299,26 @@
   --yellow: #c8553d; /* buttons use the terracotta; mustard stays reserved for flags */
   --red: #9e3f32;
 }
-.art-diorama .art-controls {
-  color: var(--ink);
-  text-shadow: none;
+.painted .art-controls {
+  color: var(--cream);
+  text-shadow: 1px 1px 0 #2a2230, -1px -1px 0 #2a2230, 1px -1px 0 #2a2230, -1px 1px 0 #2a2230;
 }
-.art-diorama .three-hud {
-  color: var(--ink);
-  text-shadow: none;
+.painted .three-hud {
+  color: var(--cream);
+  text-shadow: 1px 1px 0 #2a2230, -1px -1px 0 #2a2230, 1px -1px 0 #2a2230, -1px 1px 0 #2a2230;
 }
-.art-diorama .three-player .dot {
-  border-color: var(--ink);
+.painted .three-player .dot {
+  border-color: #2a2230;
 }
-.art-diorama .three-msg {
+.painted .three-msg {
   background: var(--cream);
   color: var(--ink);
   border: 2px solid #2a2230;
   border-radius: 10px;
   box-shadow: 0 3px 0 #2a2230;
 }
-.art-diorama .three-actions button,
-.art-diorama .three-recenter {
+.painted .three-actions button,
+.painted .three-recenter {
   background: #c8553d;
   color: #f1e3c6;
   border: 2px solid #2a2230;
@@ -327,21 +327,21 @@
   text-transform: none;
   box-shadow: 0 3px 0 #2a2230;
 }
-.art-diorama .three-actions button:active,
-.art-diorama .three-recenter:active {
+.painted .three-actions button:active,
+.painted .three-recenter:active {
   transform: translateY(2px);
   box-shadow: 0 1px 0 #2a2230;
 }
-.art-diorama .three-card {
+.painted .three-card {
   background: var(--cream);
   border: 3px solid #2a2230;
   border-radius: 12px;
   box-shadow: 0 4px 0 #2a2230;
 }
-.art-diorama .three-card-info strong {
+.painted .three-card-info strong {
   text-transform: none;
 }
-.art-diorama .vhs-caption {
+.painted .vhs-caption {
   background: var(--cream);
   color: var(--ink);
   border: 2px solid #2a2230;
@@ -349,13 +349,13 @@
   border-radius: 10px;
   box-shadow: 0 3px 0 #2a2230;
 }
-.art-diorama .vhs-caption strong {
+.painted .vhs-caption strong {
   font-family: "Trebuchet MS", system-ui, sans-serif;
   font-weight: 800;
   font-size: 22px;
   text-shadow: none;
 }
-.art-diorama .vhs-caption span {
+.painted .vhs-caption span {
   letter-spacing: 0.08em;
 }
 
@@ -420,4 +420,23 @@
 /* squint test: blur the canvas to check that districts and shapes still read */
 .squint canvas {
   filter: blur(4px);
+}
+
+/* a camera flash between two locations */
+.cam-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: #fff;
+  opacity: 0;
+  animation: cam-flash 0.5s ease-out forwards;
+}
+@keyframes cam-flash {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
 }

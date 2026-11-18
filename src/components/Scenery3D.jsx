@@ -2,16 +2,17 @@
 // Location scenery. Each board space has a theme (src/game/locationThemes.js);
 // this turns a theme into ground, back walls, props, sky and light. Everything
 // is procedural (canvas textures + primitives), seeded, Lambert-shaded.
-import { useEffect, useMemo, useRef } from "react";
+import { useContext, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { MOODS } from "../game/locationThemes";
 import { SIZE } from "./layout3d";
 import { Box, Cyl, GROUND_Y, Lam, canvasTexture, rngFor } from "./Skate3DEnv";
+import { HULL, OutlineCtx, PAL, SKY_BY_MOOD, lam, paintGradients, snap } from "./paint";
 
 const IMPACT = "Impact, 'Arial Narrow Bold', 'Arial Black', sans-serif";
 const CJK = "'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif";
-const CREAM = "#E8DCC0";
+const CREAM = PAL.cream;
 const WALL_OFF = SIZE / 2 + 6.5; // the two back walls stand this far from the centre
 const WALL_H = 8;
 
@@ -36,7 +37,7 @@ const SLOTS = {
 function speckle(ctx, w, h, r, n, lo, hi, a = 0.5) {
   for (let i = 0; i < n; i++) {
     const v = lo + Math.floor(r() * (hi - lo));
-    ctx.fillStyle = `rgba(${v},${v},${v},${0.2 + r() * a})`;
+    ctx.fillStyle = `rgba(${v},${v},${v},${(0.2 + r() * a) * 0.45})`;
     ctx.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2);
   }
 }
@@ -47,7 +48,7 @@ function groundTexture([kind, color]) {
     512,
     (ctx, w, h) => {
       const r = rngFor(kind.length * 31 + 5);
-      ctx.fillStyle = color;
+      ctx.fillStyle = snap(color);
       ctx.fillRect(0, 0, w, h);
       switch (kind) {
         case "sand":
@@ -181,7 +182,7 @@ function groundTexture([kind, color]) {
         }
       }
     },
-    10
+    3
   );
 }
 
@@ -205,9 +206,9 @@ function wallTexture(wall, seed) {
   const H = 356;
   return canvasTexture(W, H, (ctx, w, h) => {
     const r = rngFor(seed);
-    const acc = wall.accent;
+    const acc = wall.accent.map(snap);
     const pick = () => acc[Math.floor(r() * acc.length)];
-    ctx.fillStyle = wall.base;
+    ctx.fillStyle = snap(wall.base);
     ctx.fillRect(0, 0, w, h);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -326,6 +327,7 @@ function wallTexture(wall, seed) {
       default:
         break;
     }
+    paintGradients(ctx, w, h); // soft top light, grime toward the bottom, edge highlights
     // blobs of spray paint, then the tags
     if (["brick", "concrete", "stucco", "neon"].includes(wall.kind)) {
       for (let i = 0; i < 12; i++) {
@@ -417,12 +419,14 @@ function quarterPipe(R, width) {
 
 function QP({ R = 1.8, width = 2.6, color = WOOD }) {
   const geom = useMemo(() => quarterPipe(R, width), [R, width]);
+  const outlines = useContext(OutlineCtx);
   return (
     // rotated so the ramp rises away from the board centre
     <group rotation={[0, Math.PI / 2, 0]}>
       <mesh geometry={geom} castShadow receiveShadow>
-        <meshLambertMaterial color={color} />
+        <meshLambertMaterial color={snap(color)} />
       </mesh>
+      {outlines && <mesh geometry={geom} material={HULL} scale={[1.04, 1.04, 1.05]} />}
       <Cyl pos={[R, R, 0]} r={0.05} h={width + 0.1} color={METAL} seg={8} rot={[Math.PI / 2, 0, 0]} />
     </group>
   );
@@ -662,7 +666,7 @@ function Church() {
       </mesh>
       <mesh position={[0, 4.8, 1.23]}>
         <circleGeometry args={[0.7, 16]} />
-        <meshBasicMaterial color="#e6c860" />
+        <meshBasicMaterial color={snap("#e6c860")} />
       </mesh>
       <Box pos={[0, 6.7, 0]} size={[0.15, 1.2, 0.15]} color="#3a2a1a" />
       <Box pos={[0, 6.9, 0]} size={[0.7, 0.15, 0.15]} color="#3a2a1a" />
@@ -719,7 +723,7 @@ function Tower() {
           [0, 1, 2, 3].map((c) => (
             <mesh key={`${row}${c}`} position={[-0.9 + c * 0.6, -0.45 + row * 0.45, 0.12]}>
               <planeGeometry args={[0.4, 0.3]} />
-              <meshBasicMaterial color="#fff6d8" />
+              <meshBasicMaterial color={snap("#fff6d8")} />
             </mesh>
           ))
         )}
@@ -802,7 +806,7 @@ function Stall() {
       <Box pos={[0, 0.24, 0.2]} size={[2.3, 0.48, 0.7]} color="#6a4a2e" />
       <mesh position={[0, 1.9, 0.5]}>
         <sphereGeometry args={[0.22, 8, 6]} />
-        <meshBasicMaterial color="#ffb84a" />
+        <meshBasicMaterial color={snap("#ffb84a")} />
       </mesh>
     </group>
   );
@@ -897,11 +901,11 @@ function Siren() {
       <group ref={spin} position={[0, 2.2, 0]}>
         <mesh position={[0.16, 0, 0]}>
           <boxGeometry args={[0.24, 0.3, 0.3]} />
-          <meshBasicMaterial color="#ff2a2a" />
+          <meshBasicMaterial color={snap("#ff2a2a")} />
         </mesh>
         <mesh position={[-0.16, 0, 0]}>
           <boxGeometry args={[0.24, 0.3, 0.3]} />
-          <meshBasicMaterial color="#2a62ff" />
+          <meshBasicMaterial color={snap("#2a62ff")} />
         </mesh>
       </group>
     </group>
@@ -916,7 +920,7 @@ function Podium() {
       <Cyl pos={[0, 1.2, 0.1]} r={0.2} h={0.12} color="#d6402b" seg={10} />
       <mesh position={[0, 0.55, 0.41]}>
         <planeGeometry args={[0.8, 0.4]} />
-        <meshBasicMaterial color="#59d6ff" />
+        <meshBasicMaterial color={snap("#59d6ff")} />
       </mesh>
     </group>
   );
@@ -930,7 +934,7 @@ function Spot() {
         <Cyl pos={[0, 0, 0]} r={0.3} rTop={0.2} h={0.6} color="#222" seg={10} />
         <mesh position={[0, 3.2, 0]}>
           <coneGeometry args={[1.6, 5.6, 14, 1, true]} />
-          <meshBasicMaterial color="#cfd8ff" transparent opacity={0.12} depthWrite={false} side={THREE.DoubleSide} />
+          <meshBasicMaterial color={snap("#cfd8ff")} transparent opacity={0.12} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
       </group>
     </group>
@@ -977,7 +981,7 @@ function neonColor(text) {
   const cols = ["#ff5fd2", "#59d6ff", "#F2B632", "#ff4a3a"];
   let h = 0;
   for (const ch of text ?? "") h += ch.charCodeAt(0);
-  return cols[h % cols.length];
+  return snap(cols[h % cols.length]);
 }
 
 // Low obstacles are repeated on the front side of the board too (mirrored through
@@ -1001,6 +1005,39 @@ function Prop({ spec, mirror = false }) {
   );
 }
 
+// ---- the floating chunk the whole street spot sits on -------------------------------
+// A thick slab whose top carries the location's ground, over a darker underside
+// block, both outlined: the diorama floats in the sky like a chunk of city.
+const BASE_LO = -WALL_OFF - 0.7;
+const BASE_HI = SIZE / 2 + 8;
+function FloatingBase({ ground }) {
+  const outlines = useContext(OutlineCtx);
+  const size = BASE_HI - BASE_LO;
+  const c = (BASE_HI + BASE_LO) / 2;
+  const thick = 1.1;
+  const mats = useMemo(() => {
+    const side = lam(PAL.slab);
+    // +x, -x, top (the ground texture), bottom, +z, -z
+    return [side, side, new THREE.MeshLambertMaterial({ map: ground }), side, side, side];
+  }, [ground]);
+  useEffect(() => () => mats[2].dispose(), [mats]);
+  return (
+    <>
+      <group position={[c, GROUND_Y - thick / 2, c]}>
+        <mesh material={mats} receiveShadow castShadow>
+          <boxGeometry args={[size, thick, size]} />
+        </mesh>
+        {outlines && (
+          <mesh material={HULL} scale={[(size + 0.26) / size, (thick + 0.26) / thick, (size + 0.26) / size]}>
+            <boxGeometry args={[size, thick, size]} />
+          </mesh>
+        )}
+      </group>
+      <Box pos={[c, GROUND_Y - thick - 0.55, c]} size={[size - 5, 1.1, size - 5]} color={PAL.under} t={0.12} />
+    </>
+  );
+}
+
 // ---- the scene --------------------------------------------------------------
 // `index` is the board space this setting is for (it seeds the textures).
 export function LocationScene({ theme, index }) {
@@ -1015,16 +1052,13 @@ export function LocationScene({ theme, index }) {
   );
   const L = SIZE + 14;
   const y = GROUND_Y + WALL_H / 2;
-  const capColor = theme.wall.kind === "hedge" ? "#2c5430" : "#8c8a82";
+  const capColor = theme.wall.kind === "hedge" ? "#5d7f52" : PAL.street;
   return (
     <>
-      <mesh position={[0, GROUND_Y, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[170, 170]} />
-        <meshLambertMaterial map={ground} />
-      </mesh>
+      <FloatingBase ground={ground} />
       {/* wall on the far -x side, facing +x */}
       <group position={[-WALL_OFF, 0, 0]}>
-        <Box pos={[0, y, 0]} size={[0.5, WALL_H, L]} color="#3a3835" cast={false} />
+        <Box pos={[0, y, 0]} size={[0.5, WALL_H, L]} color={PAL.under} cast={false} />
         <mesh position={[0.26, y, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
           <planeGeometry args={[L, WALL_H]} />
           <meshLambertMaterial map={walls[0]} />
@@ -1033,7 +1067,7 @@ export function LocationScene({ theme, index }) {
       </group>
       {/* wall on the far -z side, facing +z */}
       <group position={[0, 0, -WALL_OFF]}>
-        <Box pos={[0, y, 0]} size={[L, WALL_H, 0.5]} color="#3a3835" cast={false} />
+        <Box pos={[0, y, 0]} size={[L, WALL_H, 0.5]} color={PAL.under} cast={false} />
         <mesh position={[0, y, 0.26]} receiveShadow>
           <planeGeometry args={[L, WALL_H]} />
           <meshLambertMaterial map={walls[1]} />
@@ -1058,69 +1092,51 @@ export function LocationScene({ theme, index }) {
 }
 
 // ---- sky and light, easing between moods -----------------------------------------
+// A flat pastel sky and the brief's light: a hemisphere (#dfe8f2 over #7a7064)
+// plus one warm key light (#fff0d8) with soft shadows, each nudged toward the
+// current location's mood. Street lamps are glowing bulbs only: no extra real lights.
 const tmp = new THREE.Color();
 export function Atmosphere({ theme }) {
   const mood = MOODS[theme.mood] ?? MOODS.home;
   const hemi = useRef();
   const key = useRef();
-  const lamp = useRef();
   const { scene } = useThree();
+  const sky = SKY_BY_MOOD[theme.mood] ?? SKY_BY_MOOD.home;
+  const hemiColor = useMemo(() => new THREE.Color("#dfe8f2").lerp(new THREE.Color(mood.hemi[0]), 0.35), [mood]);
+  const keyColor = useMemo(() => new THREE.Color("#fff0d8").lerp(new THREE.Color(mood.key[0]), 0.45), [mood]);
   useEffect(() => {
-    scene.background = new THREE.Color(mood.bg);
-  }, [scene, mood.bg]); // first mount only; later changes ease in the frame loop
-
-  const lampSlot = useMemo(() => {
-    const hasLamp = theme.props.find((p) => p.startsWith("lamp@"));
-    return hasLamp ? SLOTS[parseProp(hasLamp).slot] : theme.lamp ? [-14.4, -14.4] : null;
-  }, [theme]);
+    scene.background = new THREE.Color(sky);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useFrame((_, dt) => {
     const k = Math.min(1, dt * 3);
-    scene.background.lerp(tmp.set(mood.bg), k);
-    if (hemi.current) {
-      hemi.current.color.lerp(tmp.set(mood.hemi[0]), k);
-      hemi.current.groundColor.lerp(tmp.set(mood.hemi[1]), k);
-      hemi.current.intensity += (mood.hemi[2] - hemi.current.intensity) * k;
-    }
+    scene.background.lerp(tmp.set(sky), k);
+    if (hemi.current) hemi.current.color.lerp(hemiColor, k);
     if (key.current) {
-      key.current.color.lerp(tmp.set(mood.key[0]), k);
-      key.current.intensity += (mood.key[1] - key.current.intensity) * k;
-    }
-    if (lamp.current) {
-      lamp.current.intensity += ((lampSlot ? 90 : 0) - lamp.current.intensity) * k;
-      if (lampSlot) {
-        // the bulb hangs 1.7 out from the post, toward the board's centre
-        const len = Math.hypot(lampSlot[0], lampSlot[1]) || 1;
-        lamp.current.position.set(
-          lampSlot[0] - (lampSlot[0] / len) * 1.7,
-          GROUND_Y + 7,
-          lampSlot[1] - (lampSlot[1] / len) * 1.7
-        );
-      }
+      key.current.color.lerp(keyColor, k);
+      key.current.intensity += (2.7 + mood.key[1] * 0.18 - key.current.intensity) * k;
     }
   });
 
   return (
     <>
-      <hemisphereLight ref={hemi} args={["#cfd6e6", "#5a5448", 2.2]} />
+      <hemisphereLight ref={hemi} args={["#dfe8f2", "#7a7064", 2.5]} />
       <directionalLight
         ref={key}
-        position={[-14, 32, 18]}
-        color="#fff1d6"
-        intensity={2.8}
+        position={[-14, 32, 20]}
+        color="#fff0d8"
+        intensity={3}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-24}
-        shadow-camera-right={24}
-        shadow-camera-top={24}
-        shadow-camera-bottom={-24}
+        shadow-camera-left={-26}
+        shadow-camera-right={26}
+        shadow-camera-top={26}
+        shadow-camera-bottom={-26}
         shadow-camera-near={1}
-        shadow-camera-far={100}
+        shadow-camera-far={110}
         shadow-bias={-0.0004}
         shadow-normalBias={0.03}
       />
-      {/* one warm lamp light that is always mounted (so the shaders never recompile) */}
-      <pointLight ref={lamp} color="#ffd9a0" intensity={0} distance={34} decay={2} position={[-12, 6, -12]} />
     </>
   );
 }

@@ -2,6 +2,7 @@
 // Skater figures built from primitives. Local +x is the direction of travel;
 // the skater stands sideways on the board and looks toward +z.
 import * as THREE from "three";
+import { snap } from "./paint";
 
 const SKIN = "#d6a47c";
 const PANTS = "#3a4659";
@@ -86,7 +87,7 @@ export function Skater({ build = "baggy", shirt = "#3f78b5", hatColor, board = t
             [-0.1, 0.1].map((z) => (
               <mesh key={`${x}${z}`} position={[x, 0.055, z]} rotation={[Math.PI / 2, 0, 0]} castShadow>
                 <cylinderGeometry args={[0.055, 0.055, 0.05, 8]} />
-                <meshLambertMaterial color="#e9e4d4" />
+                <meshLambertMaterial color={snap("#e9e4d4")} />
               </mesh>
             ))
           )}
@@ -132,7 +133,7 @@ export function Flag({ color, accent = null }) {
       )}
       <mesh position={[0, 0.5, 0]} castShadow>
         <cylinderGeometry args={[0.025, 0.025, 1, 6]} />
-        <meshLambertMaterial color="#cfcfcf" />
+        <meshLambertMaterial color={snap("#cfcfcf")} />
       </mesh>
       <mesh position={[0.2, 0.86, 0]} castShadow>
         <boxGeometry args={[0.4, 0.24, 0.02]} />

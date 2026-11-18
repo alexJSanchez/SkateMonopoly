@@ -2,7 +2,7 @@
 .three-root {
   position: fixed;
   inset: 0;
-  background: #cfe8ff;
+  background: #e9d9bf;
 }
 .three-hud {
   position: absolute;
@@ -70,6 +70,23 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.three-card {
+  position: absolute;
+  background: #fbf6ea;
+}
+.three-card-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  line-height: 1;
 }
 .three-card img {
   display: block;

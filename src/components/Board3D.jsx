@@ -24,19 +24,22 @@ const STEP_MS = 220;
 const MAX_WALK = 12;
 const DICE_MS = 900;
 
+// Muted tabletop palette: warm paper tiles, softened colour groups.
 const GROUP_COLORS = {
-  usa: "#8b4513",
-  canada: "#87ceeb",
-  spain: "#ff9fc0",
-  china: "#ffa500",
-  germany: "#e53e3e",
-  mexico: "#f6e05e",
-  africa: "#38a169",
-  brand: "#222222",
-  other: "#00008b",
+  usa: "#a0694a",
+  canada: "#8fbcd4",
+  spain: "#e3a1b5",
+  china: "#e2a65a",
+  germany: "#c9605a",
+  mexico: "#e3cb6e",
+  africa: "#6fa780",
+  brand: "#4a4a4a",
+  other: "#4d5b8a",
 };
-const TYPE_COLORS = { chance: "#ffd9b3", trivia: "#d9d2ff", tax: "#f4c2c2", corner: "#fff7e0" };
-const PLAYER_COLORS = ["#2b6cb0", "#c53030"];
+const TILE_COLOR = "#f6efe0";
+const TYPE_COLORS = { chance: "#f0cfa6", trivia: "#cfc8ea", tax: "#e4b5b0", corner: "#f1e4c8" };
+const PLAYER_COLORS = ["#3f78b5", "#c4504a"];
+const INK = "#2b2622";
 
 // Same path as layout.js: top row left to right, down the right, back along the bottom, up the left.
 function track(index) {
@@ -85,7 +88,7 @@ function Label({ text, price, w, d, rotation }) {
     canvas.width = Math.round(pw * px);
     canvas.height = Math.round(ph * px);
     const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#1a1a1a";
+    ctx.fillStyle = INK;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "bold 30px system-ui, sans-serif";
@@ -116,10 +119,20 @@ function Label({ text, price, w, d, rotation }) {
   );
 }
 
-function Space({ index }) {
+const TILE_H = 0.16;
+
+function Space({ index, selected, onSelect }) {
   const space = boardSpaces[index];
   const { x, z, w, d } = spaceRect(index);
-  const base = TYPE_COLORS[space.type] ?? "#f4f1e8";
+  const base = TYPE_COLORS[space.type] ?? TILE_COLOR;
+  const lift = useRef();
+  const [hovered, setHovered] = useState(false);
+  // Hovered and selected tiles rise a little, eased.
+  useFrame((_, dt) => {
+    if (!lift.current) return;
+    const goal = selected ? 0.16 : hovered ? 0.1 : 0;
+    lift.current.position.y += (goal - lift.current.position.y) * Math.min(1, dt * 12);
+  });
   const band = space.group ? GROUP_COLORS[space.group] : null;
   const rot = labelRotation(index);
   const { row, col } = track(index);
@@ -136,19 +149,44 @@ function Space({ index }) {
     bandPos = [-w / 2 + bandSize / 2, 0.08, 0];
     bandDims = [bandSize, 0.04, d];
   }
+  const glow = selected ? "#ffd98a" : hovered ? "#fff0c8" : "#000000";
   return (
     <group position={[x, 0, z]}>
-      <mesh position={[0, 0.03, 0]} receiveShadow>
-        <boxGeometry args={[w * 0.97, 0.12, d * 0.97]} />
-        <meshStandardMaterial color={base} />
-      </mesh>
-      {band && space.type === "property" && (
-        <mesh position={bandPos}>
-          <boxGeometry args={bandDims} />
-          <meshStandardMaterial color={band} />
+      <group
+        ref={lift}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = "";
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(index);
+        }}
+      >
+        <mesh position={[0, TILE_H / 2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w * 0.96, TILE_H, d * 0.96]} />
+          <meshStandardMaterial
+            color={base}
+            roughness={0.85}
+            emissive={glow}
+            emissiveIntensity={selected ? 0.35 : hovered ? 0.3 : 0}
+          />
         </mesh>
-      )}
-      <Label text={space.name} price={space.price} w={w * 0.9} d={d * 0.9} rotation={rot} />
+        {band && space.type === "property" && (
+          <mesh position={[bandPos[0], TILE_H + 0.015, bandPos[2]]} receiveShadow>
+            <boxGeometry args={bandDims} />
+            <meshStandardMaterial color={band} roughness={0.7} />
+          </mesh>
+        )}
+        <group position={[0, TILE_H - 0.07, 0]}>
+          <Label text={space.name} price={space.price} w={w * 0.9} d={d * 0.9} rotation={rot} />
+        </group>
+      </group>
     </group>
   );
 }
@@ -171,24 +209,25 @@ function Piece({ index, space, active, offset }) {
     g.position.x += (target.x - g.position.x) * Math.min(1, dt * 14);
     g.position.z += (target.z - g.position.z) * Math.min(1, dt * 14);
     hop.current = Math.max(0, hop.current - dt * 4.5);
-    g.position.y = Math.sin(hop.current * Math.PI) * 0.5;
+    g.position.y = 0.16 + Math.sin(hop.current * Math.PI) * 0.5;
   });
 
+  // Low-poly pawn: a faceted cone body and a faceted head (flat shading).
   const color = PLAYER_COLORS[index];
   return (
-    <group ref={group} position={[target.x, 0, target.z]}>
-      <mesh position={[0, 0.45, 0]} castShadow>
-        <cylinderGeometry args={[0.22, 0.3, 0.7, 24]} />
-        <meshStandardMaterial color={color} />
+    <group ref={group} position={[target.x, 0.16, target.z]}>
+      <mesh position={[0, 0.4, 0]} castShadow>
+        <cylinderGeometry args={[0.2, 0.32, 0.8, 7]} />
+        <meshStandardMaterial color={color} flatShading roughness={0.7} />
       </mesh>
       <mesh position={[0, 1.0, 0]} castShadow>
-        <sphereGeometry args={[0.26, 24, 24]} />
-        <meshStandardMaterial color={color} />
+        <icosahedronGeometry args={[0.27, 1]} />
+        <meshStandardMaterial color={color} flatShading roughness={0.7} />
       </mesh>
       {active && (
-        <mesh position={[0, 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.38, 0.5, 32]} />
-          <meshBasicMaterial color="#ffd166" />
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.4, 0.5, 7]} />
+          <meshBasicMaterial color="#ffd98a" />
         </mesh>
       )}
     </group>
@@ -203,6 +242,7 @@ function Piece({ index, space, active, offset }) {
 const PAN_LIMIT = SIZE * 0.7;
 function Follow({ point, following, onUserMove }) {
   const controls = useRef();
+  const down = useRef(false); // a finger/mouse is on the view
   const goal = useMemo(() => new THREE.Vector3(), []);
   useFrame((_, dt) => {
     const c = controls.current;
@@ -225,12 +265,22 @@ function Follow({ point, following, onUserMove }) {
       screenSpacePanning={false}
       enableDamping
       dampingFactor={0.12}
-      onStart={onUserMove}
+      // Only a real drag stops the follow, so tapping a tile doesn't.
+      onStart={() => {
+        down.current = true;
+      }}
+      onEnd={() => {
+        down.current = false;
+      }}
+      onChange={() => {
+        if (down.current) onUserMove();
+      }}
       mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
       touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
       minDistance={6}
-      maxDistance={45}
-      maxPolarAngle={Math.PI / 2.2}
+      maxDistance={42}
+      minPolarAngle={0.35}
+      maxPolarAngle={Math.PI / 2.3}
     />
   );
 }
@@ -240,13 +290,50 @@ function Follow({ point, following, onUserMove }) {
 function modelPlacement(index) {
   const { x, z, w, d, row, col } = spaceRect(index);
   const inset = 0.16;
-  if (row === 0) return { pos: [x, 0.1, z + d / 2 - inset], rotY: 0 };
-  if (row === 10) return { pos: [x, 0.1, z - d / 2 + inset], rotY: Math.PI };
-  if (col === 0) return { pos: [x + w / 2 - inset, 0.1, z], rotY: -Math.PI / 2 };
-  return { pos: [x - w / 2 + inset, 0.1, z], rotY: Math.PI / 2 };
+  const y = TILE_H + 0.03;
+  if (row === 0) return { pos: [x, y, z + d / 2 - inset], rotY: 0 };
+  if (row === 10) return { pos: [x, y, z - d / 2 + inset], rotY: Math.PI };
+  if (col === 0) return { pos: [x + w / 2 - inset, y, z], rotY: -Math.PI / 2 };
+  return { pos: [x - w / 2 + inset, y, z], rotY: Math.PI / 2 };
 }
 
-function Scene({ game, shown, focus, turn, rolling, following, onUserMove }) {
+// The felt middle of the board with the game's name.
+function Centerpiece() {
+  const inner = 9 * UNIT;
+  const texture = useMemo(() => {
+    const px = 64;
+    const c = document.createElement("canvas");
+    c.width = c.height = Math.round(inner * px);
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#7a9a80";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.strokeStyle = "rgba(255,245,225,0.55)";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(14, 14, c.width - 28, c.height - 28);
+    ctx.fillStyle = "rgba(255,245,225,0.9)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.save();
+    ctx.translate(c.width / 2, c.height / 2);
+    ctx.rotate(-Math.PI / 4);
+    ctx.font = "bold 74px system-ui, sans-serif";
+    ctx.fillText("SKATE", 0, -42);
+    ctx.fillText("MONOPOLY", 0, 42);
+    ctx.restore();
+    const t = new THREE.CanvasTexture(c);
+    t.anisotropy = 8;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, [inner]);
+  return (
+    <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <planeGeometry args={[inner, inner]} />
+      <meshStandardMaterial map={texture} roughness={1} />
+    </mesh>
+  );
+}
+
+function Scene({ game, shown, focus, turn, rolling, following, onUserMove, selectedSpace, onSelect }) {
   const point = useMemo(() => {
     const r = spaceRect(shown[focus]);
     return { x: r.x, z: r.z };
@@ -259,15 +346,40 @@ function Scene({ game, shown, focus, turn, rolling, following, onUserMove }) {
   }, [shown, roller]);
   return (
     <>
-      <color attach="background" args={["#cfe8ff"]} />
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[10, 18, 8]} intensity={1.1} castShadow />
-      <mesh position={[0, -0.1, 0]} receiveShadow>
-        <boxGeometry args={[SIZE + 1, 0.2, SIZE + 1]} />
-        <meshStandardMaterial color="#2f6b3a" />
+      <color attach="background" args={["#e9d9bf"]} />
+      <fog attach="fog" args={["#e9d9bf", 40, 85]} />
+      {/* warm sky/ground fill, a golden key light with soft shadows, a cool rim */}
+      <hemisphereLight args={["#fff1da", "#a8825a", 0.75]} />
+      <directionalLight
+        position={[12, 20, 9]}
+        color="#ffe0b2"
+        intensity={2.1}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-17}
+        shadow-camera-right={17}
+        shadow-camera-top={17}
+        shadow-camera-bottom={-17}
+        shadow-camera-near={1}
+        shadow-camera-far={60}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.03}
+        shadow-radius={5}
+      />
+      <directionalLight position={[-10, 8, -12]} color="#b9cde8" intensity={0.35} />
+
+      {/* wooden tabletop, then the board slab sitting on it */}
+      <mesh position={[0, -0.62, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[60, 48]} />
+        <meshStandardMaterial color="#9c8466" roughness={0.9} />
       </mesh>
+      <mesh position={[0, -0.3, 0]} castShadow receiveShadow>
+        <boxGeometry args={[SIZE + 1.4, 0.6, SIZE + 1.4]} />
+        <meshStandardMaterial color="#efe3cc" roughness={0.8} />
+      </mesh>
+      <Centerpiece />
       {boardSpaces.map((_, i) => (
-        <Space key={i} index={i} />
+        <Space key={i} index={i} selected={selectedSpace === i} onSelect={onSelect} />
       ))}
       {boardSpaces.map((sp, i) => {
         const owner = ownerOf(game, i);
@@ -352,14 +464,26 @@ export default function Board3D() {
     if (wasBusy.current && !busy) setLanded({ player: mover.current, space: shown[mover.current] });
     wasBusy.current = busy;
   }, [busy, shown]);
+  // Clicking a tile opens its property card; otherwise the card shows where the last piece landed.
+  const [inspect, setInspect] = useState(null);
+  const cardSpace = inspect ?? (landed && !busy ? landed.space : null);
+  const cardOwner = cardSpace != null ? ownerOf(game, cardSpace) : -1;
   const current = players[turn];
   const space = boardSpaces[current.space];
   const targets = phase === "skate_pick" ? skateTargets(game, turn) : [];
 
   return (
     <div className="three-root">
-      <Canvas shadows camera={{ position: [0, 17, 16], fov: 45 }}>
+      <Canvas
+        shadows
+        dpr={[1, 2]}
+        camera={{ position: [0, 17, 16], fov: 45 }}
+        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+        onPointerMissed={() => setInspect(null)}
+      >
         <Scene
+          selectedSpace={inspect}
+          onSelect={(i) => setInspect((cur) => (cur === i ? null : i))}
           game={game}
           shown={shown}
           focus={focus}
@@ -375,14 +499,23 @@ export default function Board3D() {
         </button>
       )}
 
-      {landed && !busy && (
-        <div className="three-card" style={{ borderColor: PLAYER_COLORS[landed.player] }}>
-          {locationImage(landed.space) && (
-            <img src={locationImage(landed.space)} alt="" draggable="false" />
+      {cardSpace != null && (
+        <div
+          className="three-card"
+          style={{
+            borderColor:
+              cardOwner >= 0 ? PLAYER_COLORS[cardOwner] : inspect == null ? PLAYER_COLORS[landed.player] : "#cdbb99",
+          }}
+        >
+          {inspect != null && (
+            <button className="three-card-close" aria-label="Close" onClick={() => setInspect(null)}>
+              ✕
+            </button>
           )}
+          {locationImage(cardSpace) && <img src={locationImage(cardSpace)} alt="" draggable="false" />}
           <div className="three-card-info">
-            <strong>{boardSpaces[landed.space].name}</strong>
-            {locationLines(game, landed.space).map((line) => (
+            <strong>{boardSpaces[cardSpace].name}</strong>
+            {locationLines(game, cardSpace).map((line) => (
               <span key={line}>{line}</span>
             ))}
           </div>
